@@ -36,9 +36,15 @@ DEVELOPED BY
 #include <Arduino.h>
 #define VERSION "0.1"
 #include "config.h"
-#include "ESP32_New_ISR_Servo.h"
 
+#include "ESP32_New_ISR_Servo.h"
+#include <FastLED.h>
 #include "OneButton.h"
+
+// Definitions for FastLED Library for rgb eyes
+#define NUM_LEDS 20
+#define DATA_PIN 22
+CRGB leds[NUM_LEDS];
 
 TaskHandle_t Task1;
 
@@ -128,6 +134,7 @@ int facePlateCurMode = FACEPLATE_OPEN; // Keep track if the faceplate is open or
 
 int ledEyesCurMode = LED_EYES_DIM_MODE; // Keep track if we're dimming or brightening
 int ledEyesCurPwm = 0;                  // Tracking the level of the LED eyes for dim/brighten feature
+int ledEyesMaxPwm = 100;                // limiting max brightness of leds
 const int ledEyesIncrement = 15;        // Define the increments to brighten or dim the LED eyes
 
 /**
@@ -153,9 +160,13 @@ void simDelay(long period)
 void movieblink()
 {
   Serial.println(F("Start Movie Blink.."));
-
+  
   // pause for effect...
   simDelay(300);
+
+  fill_solid(leds, NUM_LEDS, CRGB::Blue);
+  FastLED.setBrightness(ledEyesMaxPwm);
+  FastLED.show();
 
   int lowValue = 21;
   int delayInterval[] = {210, 126, 84};
@@ -200,7 +211,7 @@ void movieblink()
   simDelay(delayInterval[2]);
 
   // All on
-  setLedEyes(255);
+  setLedEyes(ledEyesMaxPwm);
   auxLedOn();
 
 #if defined(SOUND) && (MP3_TYPE == JQ6500)
@@ -222,13 +233,19 @@ void fadeEyesOn()
 {
   ledEyesCurMode = LED_EYES_BRIGHTEN_MODE;
   Serial.println(F("Brightening LED eyes"));
+
+  fill_solid(leds, NUM_LEDS, CRGB::Blue);
+  FastLED.setBrightness(0);
+  FastLED.show();
+  ledEyesCurPwm = 0;
   // loop until fully lit
-  while (ledEyesCurPwm < 255)
+  while (ledEyesCurPwm < ledEyesMaxPwm)
   {
     setLedEyes(ledEyesCurPwm);
     simDelay(200);
     ledEyesBrighten();
   }
+
 }
 
 #ifdef SOUND
@@ -359,8 +376,8 @@ void facePlateOpen()
 
   simDelay(2000); // wait doesn't wait long enough for servos to fully complete...
 
-// Detach so motors don't "idle"
-ESP32_ISR_Servos.disableAll();
+  // Detach so motors don't "idle"
+  ESP32_ISR_Servos.disableAll();
 
 #ifdef WALSH85
   servo3.detach();
@@ -390,11 +407,6 @@ void facePlateClose()
 
   ESP32_ISR_Servos.setPosition(0, SERVO1_CLOSE_POS);
   ESP32_ISR_Servos.setPosition(1, SERVO2_CLOSE_POS);
-  // servo1.write(SERVO1_CLOSE_POS);
-  // servo2.write(SERVO2_CLOSE_POS);
-  // servo1.write(SERVO1_CLOSE_POS, SERVO_CLOSE_SPEED);
-  // servo2.write(SERVO2_CLOSE_POS, SERVO_CLOSE_SPEED);
-
   simDelay(1000); // wait doesn't wait long enough for servos to fully complete...
 
   // Detach so motors don't "idle"
@@ -454,12 +466,13 @@ void missileBayClose()
 /**
  * Set the brightness of the LED eyes
  *
- * @param[out] pwmValue - the PWM value (0-255) for the LED brightness
+ * @param[out] pwmValue - the PWM value (0-ledEyesMaxPwm) for the LED brightness
  */
 void setLedEyes(int pwmValue)
 {
-  analogWrite(RIGHT_EYE_PIN, pwmValue);
-  analogWrite(LEFT_EYE_PIN, pwmValue);
+  fill_solid(leds, NUM_LEDS, CRGB::Blue);
+  FastLED.setBrightness(pwmValue);
+  FastLED.show();
   ledEyesCurPwm = pwmValue;
 }
 
@@ -469,7 +482,8 @@ void setLedEyes(int pwmValue)
 void ledEyesOn()
 {
   Serial.println(F("Turning LED eyes on..."));
-  setLedEyes(255);
+  fill_solid(leds, NUM_LEDS, CRGB::Blue);
+  FastLED.show();
   ledEyesCurMode = LED_EYES_DIM_MODE;
 }
 
@@ -479,7 +493,8 @@ void ledEyesOn()
 void ledEyesOff()
 {
   Serial.println(F("Turning LED eyes off..."));
-  setLedEyes(0);
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
   ledEyesCurMode = LED_EYES_BRIGHTEN_MODE;
 }
 
@@ -520,9 +535,9 @@ void ledEyesBrighten()
   Serial.print(F("."));
   ledEyesCurPwm = ledEyesCurPwm + ledEyesIncrement; // Increase the brightness
   // Make sure we don't go over the limit
-  if (ledEyesCurPwm >= 255)
+  if (ledEyesCurPwm >= ledEyesMaxPwm)
   {
-    ledEyesCurPwm = 255;
+    ledEyesCurPwm = ledEyesMaxPwm;
   }
 }
 
@@ -531,7 +546,9 @@ void ledEyesBrighten()
  */
 void ledEyesFade()
 {
-  if (ledEyesCurPwm == 255)
+  fill_solid(leds, NUM_LEDS, CRGB::Blue);
+
+  if (ledEyesCurPwm == ledEyesMaxPwm)
   {
     ledEyesCurMode = LED_EYES_DIM_MODE;
   }
@@ -550,8 +567,8 @@ void ledEyesFade()
   }
 
   setLedEyes(ledEyesCurPwm);
-
   simDelay(200);
+  FastLED.show();
 }
 
 /*
@@ -653,7 +670,6 @@ void facePlateOpenFx()
 #endif
 
   ledEyesOff();
-
   facePlateOpen();
 }
 
@@ -831,10 +847,14 @@ void setup()
   Serial.print(F("Initializing Iron Man Servo version: "));
   Serial.println(VERSION);
 
+  FastLED.addLeds<WS2812B, DATA_PIN, RGB>(leds, NUM_LEDS);
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+
   ESP32_ISR_Servos.useTimer(USE_ESP32_TIMER_NO);
   servoIndex1 = ESP32_ISR_Servos.setupServo(SERVO1_PIN, PWM_LOW, PWM_HIGH);
   servoIndex2 = ESP32_ISR_Servos.setupServo(SERVO2_PIN, PWM_LOW, PWM_HIGH);
-  
+
   if (servoIndex1 != -1)
   {
     Serial.println(F("Setup Servo1 OK"));
@@ -856,26 +876,26 @@ void setup()
   ESP32_ISR_Servos.setPosition(1, SERVO2_OPEN_POS);
 
 #ifdef SOUND
-init_player(); // initializes the sound player
+  init_player(); // initializes the sound player
 #endif
-startupFx();         // Run the initial features
-initPrimaryButton(); // initialize the primary button
+  startupFx();         // Run the initial features
+  initPrimaryButton(); // initialize the primary button
 
 #ifdef MISSILE
-initMissileButton(); // initialize the missile button
+  initMissileButton(); // initialize the missile button
 #else
-pinMode(AUX_LED_PIN, OUTPUT); // set output for AUX LED
+  pinMode(AUX_LED_PIN, OUTPUT); // set output for AUX LED
 #endif
 
-xTaskCreatePinnedToCore(
-    Task1code, /* Task function. */
-    "Task1",   /* name of task. */
-    10000,     /* Stack size of task */
-    NULL,      /* parameter of the task */
-    1,         /* priority of the task */
-    &Task1,    /* Task handle to keep track of created task */
-    0);        /* pin task to core 0 */
-delay(500);
+  xTaskCreatePinnedToCore(
+      Task1code, /* Task function. */
+      "Task1",   /* name of task. */
+      10000,     /* Stack size of task */
+      NULL,      /* parameter of the task */
+      1,         /* priority of the task */
+      &Task1,    /* Task handle to keep track of created task */
+      0);        /* pin task to core 0 */
+  delay(500);
 }
 
 /**
