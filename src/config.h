@@ -111,8 +111,10 @@ static const int SERVO2_PIN = 19; // set the pin for servo 2
 #define BUTTON_PIN 32 // the pin that the pushbutton is attached to
 #define BUTTON2_PIN 12 // the pin that the repulsor pushbutton is attached to
 
-// led control pins (need to be PWM enabled pins for fading)
-#define LEFT_EYE_PIN  27 // left eye LEDs
+// repulsor connection
+#define REPULSOR_PIN  27 // Repulsor light
+
+// led control pin
 #define RIGHT_EYE_PIN 25 // right eye LEDs
 
 // Declare variables for setup special effects (applies to LED eyes only for now)
@@ -125,7 +127,7 @@ static const int SERVO2_PIN = 19; // set the pin for servo 2
 // use double slashes "//" to comment, or uncomment (remove double slashes) in the code below
 
 // Uncomment this line if you don't want any special effect during startup, comment this line to disable this effect
-// #define SETUP_FX EYES_NONE
+///#define SETUP_FX EYES_NONE
 
 // Uncomment this line if you want the movie blink special effect during startup, comment this line to disable this effect
 #define SETUP_FX EYES_MOVIE_BLINK
@@ -137,7 +139,7 @@ static const int SERVO2_PIN = 19; // set the pin for servo 2
 // use double slashes "//" to comment, or uncomment (remove double slashes) in the code below
 
 // Uncomment this line if you don't want any special effect during operation, comment this line to disable this effect
-// #define EYES_FX EYES_NONE
+//#define EYES_FX EYES_NONE
 
 // Uncomment this line if you want the movie blink special effect during operation, comment this line to disable this effect
 // #define EYES_FX EYES_MOVIE_BLINK
