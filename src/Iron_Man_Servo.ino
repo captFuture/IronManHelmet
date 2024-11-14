@@ -39,12 +39,19 @@ DEVELOPED BY
 #include "ESP32_New_ISR_Servo.h"
 #include <FastLED.h>
 #include "OneButton.h"
+TaskHandle_t Task1;
+
 
 // Definitions for FastLED Library for rgb eyes
 #define NUM_LEDS 20
 #define DATA_PIN 22
 CRGB leds[NUM_LEDS];
-TaskHandle_t Task1;
+
+
+#define NUM_LEDS1 4
+#define DATA_PIN 21
+CRGB leds1[NUM_LEDS];
+
 bool BATTLEMODE = false;
 
 
@@ -152,8 +159,10 @@ void movieblink()
 
   if(BATTLEMODE){
     fill_solid(leds, NUM_LEDS, CRGB::Red);
+    fill_solid(leds1, NUM_LEDS, CRGB::Red);
   }else{
     fill_solid(leds, NUM_LEDS, CRGB::Blue);
+    fill_solid(leds1, NUM_LEDS, CRGB::Blue);
   }
   FastLED.setBrightness(ledEyesMaxPwm);
   FastLED.show();
@@ -219,8 +228,10 @@ void fadeEyesOn()
 
   if(BATTLEMODE){
     fill_solid(leds, NUM_LEDS, CRGB::Red);
+    fill_solid(leds1, NUM_LEDS, CRGB::Red);
   }else{
     fill_solid(leds, NUM_LEDS, CRGB::Blue);
+    fill_solid(leds1, NUM_LEDS, CRGB::Blue);
   }
   FastLED.setBrightness(0);
   FastLED.show();
@@ -350,7 +361,7 @@ void facePlateOpen()
   ESP32_ISR_Servos.setPosition(0, SERVO1_OPEN_POS);
   ESP32_ISR_Servos.setPosition(1, SERVO2_OPEN_POS);
 
-  simDelay(2000); // wait doesn't wait long enough for servos to fully complete...
+  simDelay(1000); // wait doesn't wait long enough for servos to fully complete...
   // Detach so motors don't "idle"
   ESP32_ISR_Servos.disableAll();
   facePlateCurMode = FACEPLATE_OPEN;
@@ -367,7 +378,7 @@ void facePlateClose()
   // Send data to the servos for movement
   ESP32_ISR_Servos.setPosition(0, SERVO1_CLOSE_POS);
   ESP32_ISR_Servos.setPosition(1, SERVO2_CLOSE_POS);
-  simDelay(3000); // wait doesn't wait long enough for servos to fully complete...
+  simDelay(1000); // wait doesn't wait long enough for servos to fully complete...
 
   // Detach so motors don't "idle"
   ESP32_ISR_Servos.disableAll();
@@ -383,8 +394,10 @@ void setLedEyes(int pwmValue)
 {
   if(BATTLEMODE){
     fill_solid(leds, NUM_LEDS, CRGB::Red);
+    fill_solid(leds1, NUM_LEDS, CRGB::Red);
   }else{
     fill_solid(leds, NUM_LEDS, CRGB::Blue);
+    fill_solid(leds1, NUM_LEDS, CRGB::Blue);
   }
   FastLED.setBrightness(pwmValue);
   FastLED.show();
@@ -399,8 +412,10 @@ void ledEyesOn()
   Serial.println(F("Turning LED eyes on..."));
   if(BATTLEMODE){
     fill_solid(leds, NUM_LEDS, CRGB::Red);
+    fill_solid(leds1, NUM_LEDS, CRGB::Red);
   }else{
     fill_solid(leds, NUM_LEDS, CRGB::Blue);
+    fill_solid(leds1, NUM_LEDS, CRGB::Blue);
   }
   FastLED.show();
   ledEyesCurMode = LED_EYES_DIM_MODE;
@@ -467,8 +482,10 @@ void ledEyesFade()
 {
   if(BATTLEMODE){
     fill_solid(leds, NUM_LEDS, CRGB::Red);
+    fill_solid(leds1, NUM_LEDS, CRGB::Red);
   }else{
     fill_solid(leds, NUM_LEDS, CRGB::Blue);
+    fill_solid(leds1, NUM_LEDS, CRGB::Blue);
   }
 
   if (ledEyesCurPwm == ledEyesMaxPwm)
@@ -627,9 +644,11 @@ void handlePrimaryButtonMultiPress()
     if(BATTLEMODE){
       #define EYES_FX EYES_MOVIE_BLINK
       fill_solid(leds, NUM_LEDS, CRGB::Red);
+      fill_solid(leds1, NUM_LEDS, CRGB::Red);
     }else{
       #define EYES_FX EYES_FADE_ON
       fill_solid(leds, NUM_LEDS, CRGB::Blue);
+      fill_solid(leds1, NUM_LEDS, CRGB::Blue);
     }
     FastLED.show();
 #endif
@@ -703,6 +722,10 @@ void setup()
 
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
   fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds1, NUM_LEDS1);
+  fill_solid(leds1, NUM_LEDS, CRGB::Blue);
   FastLED.show();
 
   ESP32_ISR_Servos.useTimer(USE_ESP32_TIMER_NO);
