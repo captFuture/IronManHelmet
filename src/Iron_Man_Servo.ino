@@ -37,10 +37,29 @@ DEVELOPED BY
 #define VERSION "0.1"
 #include "config.h"
 #include "ESP32_New_ISR_Servo.h"
-
+#include <FastLED.h>
 #include "OneButton.h"
-
 TaskHandle_t Task1;
+
+
+// Definitions for FastLED Library for rgb eyes
+// Anzahl der LEDs für jeden Strip
+#define NUM_LEDS_1 20
+#define NUM_LEDS_2 4
+
+// Pin-Definitionen für die LED-Strips
+#define DATA_PIN_1 21 
+#define DATA_PIN_2 22
+
+// Pin-Definition für den Taster
+#define BUTTON_PIN 32
+
+// Array für die LED-Daten
+CRGB leds1[NUM_LEDS_1];
+CRGB leds2[NUM_LEDS_2];
+
+bool BATTLEMODE = false;
+
 
 #ifdef SOUND
 #ifndef MP3_TYPE
@@ -67,27 +86,6 @@ void printDetail(uint8_t type, int value); // header method for implementation b
 
 #endif
 
-#ifdef WALSH85
-Servo servo3; // create servo object to control servo 3 (Walsh85 chin Control)
-#endif
-
-#ifdef MISSILE
-Servo servo4; // create servo object to control servo 3
-Servo servo5; // create servo object to control servo 4
-
-// Define object for the missile button
-OneButton missileButton = OneButton(MISSILE_BUTTON_PIN, true, true);
-
-// State of the missile bay 1 = open, 0 = closed
-#define MISSILE_BAY_CLOSED 0
-#define MISSILE_BAY_OPEN 1
-int missileBayCurMode = MISSILE_BAY_OPEN; // Keep track if the missile bay is open or closed
-#endif
-
-#ifndef MISSILE
-boolean auxLedState = false; // Keeps track of the state of the LED on = true, off = false
-#endif
-
 #ifdef SOUND
 // Declare variables for sound control
 #define SND_CLOSE 1     // sound track for helmet closing sound
@@ -106,17 +104,24 @@ JQ6500_Serial mp3Obj(Serial2); // Create object for JQ6500 module
 #endif
 #endif
 
-// Define object for primary button to handle
+// Define object for buttons to handle
 // multiple button press features:
 // 1. Single Tap
 // 2. Double Tap
 // 3. Long Press
 OneButton primaryButton = OneButton(BUTTON_PIN, true, true);
+OneButton repulsorButton = OneButton(BUTTON2_PIN, true, true);
 
 // State of the faceplate 1 = open, 0 = closed
 #define FACEPLATE_CLOSED 0
 #define FACEPLATE_OPEN 1
+
+#define ISRSERVO_CLOSED 0
+#define ISRSERVO_OPEN 1
+
 int facePlateCurMode = FACEPLATE_OPEN; // Keep track if the faceplate is open or closed
+int facePlateIsrMode = ISRSERVO_OPEN;
+
 
 // State of the LED eyes 1 = on, 2 = off
 #define LED_EYES_OFF 0
@@ -127,8 +132,10 @@ int facePlateCurMode = FACEPLATE_OPEN; // Keep track if the faceplate is open or
 #define LED_EYES_BRIGHTEN_MODE 1
 
 int ledEyesCurMode = LED_EYES_DIM_MODE; // Keep track if we're dimming or brightening
+int ledEyesMinPwm = 0;
 int ledEyesCurPwm = 0;                  // Tracking the level of the LED eyes for dim/brighten feature
-const int ledEyesIncrement = 15;        // Define the increments to brighten or dim the LED eyes
+int ledEyesMaxPwm = 255;                // limiting max brightness of leds ----------------------------------------------------------------------------
+const int ledEyesIncrement = 20;        // Define the increments to brighten or dim the LED eyes
 
 /**
  * Helper Method
@@ -157,7 +164,14 @@ void movieblink()
   // pause for effect...
   simDelay(300);
 
-  int lowValue = 21;
+  if(BATTLEMODE){
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm)); 
+  }else{
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm)); 
+  }
+  FastLED.show();
+
+  int lowValue = ledEyesMaxPwm/2;
   int delayInterval[] = {210, 126, 84};
   int delayVal = 0;
 
@@ -165,43 +179,36 @@ void movieblink()
   for (int i = 0; i <= lowValue; i++)
   {
     setLedEyes(i);
-    setAuxLed();
     delayVal = delayInterval[0] / lowValue;
     simDelay(delayVal);
   }
 
   // Turn off
   setLedEyes(0);
-  setAuxLed();
   simDelay(delayInterval[0]);
 
   // Second blink on
   for (int i = 0; i <= lowValue; i++)
   {
     setLedEyes(i);
-    setAuxLed();
     delayVal = delayInterval[1] / lowValue;
     simDelay(delayVal);
   }
 
   // Turn off
   setLedEyes(0);
-  setAuxLed();
   simDelay(delayInterval[1]);
 
   // Third blink on
   setLedEyes(lowValue);
-  setAuxLed();
   simDelay(delayInterval[2]);
 
   // Turn off
   setLedEyes(0);
-  setAuxLed();
   simDelay(delayInterval[2]);
 
   // All on
-  setLedEyes(255);
-  auxLedOn();
+  setLedEyes(ledEyesMaxPwm);
 
 #if defined(SOUND) && (MP3_TYPE == JQ6500)
 #if (SND_EFFECT_TYPE == JARVIS)
@@ -222,8 +229,16 @@ void fadeEyesOn()
 {
   ledEyesCurMode = LED_EYES_BRIGHTEN_MODE;
   Serial.println(F("Brightening LED eyes"));
+
+  if(BATTLEMODE){
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm)); 
+  }else{
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMinPwm)); 
+  }
+  FastLED.show();
+  ledEyesCurPwm = 0;
   // loop until fully lit
-  while (ledEyesCurPwm < 255)
+  while (ledEyesCurPwm < ledEyesMaxPwm)
   {
     setLedEyes(ledEyesCurPwm);
     simDelay(200);
@@ -343,29 +358,13 @@ void facePlateOpen()
   Serial.println(F("Servo Up!"));
   ESP32_ISR_Servos.enableAll();
 
-#ifdef WALSH85
-  servo3.attach(SERVO3_PIN, PWM_LOW, PWM_HIGH);
-#endif
-
   // Send data to the servos for movement
   ESP32_ISR_Servos.setPosition(0, SERVO1_OPEN_POS);
   ESP32_ISR_Servos.setPosition(1, SERVO2_OPEN_POS);
 
-#ifdef WALSH85
-  simDelay(500);
-  servo3.write(SERVO3_OPEN_POS, CHIN_OPEN_SPEED);
-// simDelay(1000); // wait doesn't wait long enough for servos to fully complete...
-#endif
-
-  simDelay(2000); // wait doesn't wait long enough for servos to fully complete...
-
-// Detach so motors don't "idle"
-ESP32_ISR_Servos.disableAll();
-
-#ifdef WALSH85
-  servo3.detach();
-#endif
-
+  simDelay(1000); // wait doesn't wait long enough for servos to fully complete...
+  // Detach so motors don't "idle"
+  ESP32_ISR_Servos.disableAll();
   facePlateCurMode = FACEPLATE_OPEN;
 }
 
@@ -377,89 +376,30 @@ void facePlateClose()
   Serial.println(F("Servo Down"));
   ESP32_ISR_Servos.enableAll();
 
-#ifdef WALSH85
-  servo3.attach(SERVO3_PIN, PWM_LOW, PWM_HIGH);
-#endif
-
   // Send data to the servos for movement
-
-#ifdef WALSH85
-  servo3.write(SERVO3_CLOSE_POS, CHIN_CLOSE_SPEED);
-  simDelay(500); // Delay to allow chin to fully close before Faceplate closes
-#endif
-
   ESP32_ISR_Servos.setPosition(0, SERVO1_CLOSE_POS);
   ESP32_ISR_Servos.setPosition(1, SERVO2_CLOSE_POS);
-  // servo1.write(SERVO1_CLOSE_POS);
-  // servo2.write(SERVO2_CLOSE_POS);
-  // servo1.write(SERVO1_CLOSE_POS, SERVO_CLOSE_SPEED);
-  // servo2.write(SERVO2_CLOSE_POS, SERVO_CLOSE_SPEED);
-
   simDelay(1000); // wait doesn't wait long enough for servos to fully complete...
 
   // Detach so motors don't "idle"
   ESP32_ISR_Servos.disableAll();
-
-#ifdef WALSH85
-  servo3.detach();
-#endif
-
   facePlateCurMode = FACEPLATE_CLOSED;
 }
-
-#ifdef MISSILE
-/**
- * Method to open the missile bay
- */
-void missileBayOpen()
-{
-  Serial.println(F("Missile bay opening..."));
-  servo4.attach(SERVO4_PIN, PWM_LOW, PWM_HIGH);
-  servo5.attach(SERVO5_PIN, PWM_LOW, PWM_HIGH);
-
-  servo4.write(SERVO4_OPEN_POS, MISSILE_BAY_OPEN_SPEED);
-  simDelay(MISSILE_BAY_DELAY);
-  servo5.write(SERVO5_OPEN_POS, MISSILE_OPEN_SPEED);
-
-  simDelay(MISSILE_BAY_DELAY);
-
-  servo4.detach();
-  servo5.detach();
-
-  missileBayCurMode = MISSILE_BAY_OPEN;
-}
-
-/**
- * Method to close the missile bay
- */
-void missileBayClose()
-{
-  Serial.println(F("Missile bay closing..."));
-  servo4.attach(SERVO4_PIN, PWM_LOW, PWM_HIGH);
-  servo5.attach(SERVO5_PIN, PWM_LOW, PWM_HIGH);
-
-  servo5.write(SERVO5_CLOSE_POS, MISSILE_CLOSE_SPEED);
-  simDelay(1000);
-  servo4.write(SERVO4_CLOSE_POS, MISSILE_BAY_CLOSE_SPEED);
-
-  simDelay(1000);
-
-  servo4.detach();
-  servo5.detach();
-
-  missileBayCurMode = MISSILE_BAY_CLOSED;
-}
-#endif
 
 /**
  * Set the brightness of the LED eyes
  *
- * @param[out] pwmValue - the PWM value (0-255) for the LED brightness
+ * @param[out] pwmValue - the PWM value (0-ledEyesMaxPwm) for the LED brightness
  */
 void setLedEyes(int pwmValue)
 {
-  analogWrite(RIGHT_EYE_PIN, pwmValue);
-  analogWrite(LEFT_EYE_PIN, pwmValue);
+  if(BATTLEMODE){
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, pwmValue)); 
+  }else{
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, pwmValue)); 
+  }
+  //FastLED.setBrightness(pwmValue);
+  FastLED.show();
   ledEyesCurPwm = pwmValue;
 }
 
@@ -469,7 +409,12 @@ void setLedEyes(int pwmValue)
 void ledEyesOn()
 {
   Serial.println(F("Turning LED eyes on..."));
-  setLedEyes(255);
+  if(BATTLEMODE){
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm)); 
+  }else{
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm)); 
+  }
+  FastLED.show();
   ledEyesCurMode = LED_EYES_DIM_MODE;
 }
 
@@ -479,7 +424,12 @@ void ledEyesOn()
 void ledEyesOff()
 {
   Serial.println(F("Turning LED eyes off..."));
-  setLedEyes(0);
+  if(BATTLEMODE){
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm)); 
+  }else{
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMinPwm)); 
+  }
+  FastLED.show();
   ledEyesCurMode = LED_EYES_BRIGHTEN_MODE;
 }
 
@@ -489,17 +439,21 @@ void ledEyesOff()
 void ledEyesOnOff()
 {
   // LED eyes stay off when faceplate is open
-  if (facePlateCurMode == FACEPLATE_CLOSED)
-  {
+  //if (facePlateCurMode == FACEPLATE_CLOSED)
+  //{
     if (ledEyesCurPwm > 0)
     {
       ledEyesOff();
+      arcMode(1);
+      ledEyesCurPwm = 0;
     }
     else
     {
       ledEyesOn();
+      arcMode(1);
+      ledEyesCurPwm = ledEyesMaxPwm;
     }
-  }
+  //}
 }
 
 void ledEyesDim()
@@ -520,9 +474,9 @@ void ledEyesBrighten()
   Serial.print(F("."));
   ledEyesCurPwm = ledEyesCurPwm + ledEyesIncrement; // Increase the brightness
   // Make sure we don't go over the limit
-  if (ledEyesCurPwm >= 255)
+  if (ledEyesCurPwm >= ledEyesMaxPwm)
   {
-    ledEyesCurPwm = 255;
+    ledEyesCurPwm = ledEyesMaxPwm;
   }
 }
 
@@ -531,7 +485,13 @@ void ledEyesBrighten()
  */
 void ledEyesFade()
 {
-  if (ledEyesCurPwm == 255)
+  if(BATTLEMODE){
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm)); 
+  }else{
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm)); 
+  }
+
+  if (ledEyesCurPwm == ledEyesMaxPwm)
   {
     ledEyesCurMode = LED_EYES_DIM_MODE;
   }
@@ -550,54 +510,19 @@ void ledEyesFade()
   }
 
   setLedEyes(ledEyesCurPwm);
-
+  arcMode(1);
   simDelay(200);
+  FastLED.show();
 }
 
-/*
- * Sets the Aux LED
- */
-void setAuxLed()
-{
-#ifndef MISSILE
-  if (AUX_LED_ENABLED)
-  {
-    if (auxLedState == false)
-    {
-      auxLedOn();
-    }
-    else
-    {
-      auxLedOff();
-    }
+
+void arcMode(uint8_t mode){
+  if(BATTLEMODE){
+    fill_solid(leds1, NUM_LEDS_1, CHSV(0, 255, ledEyesMaxPwm)); 
+  }else{
+    fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, ledEyesMaxPwm)); 
   }
-  else
-  {
-    auxLedOff();
-  }
-#endif
-}
-
-/*
- * Turn the Aux LED on
- */
-void auxLedOn()
-{
-#ifndef MISSILE
-  digitalWrite(AUX_LED_PIN, HIGH);
-  auxLedState = true;
-#endif
-}
-
-/*
- * Turn the Aux LED off
- */
-void auxLedOff()
-{
-#ifndef MISSILE
-  digitalWrite(AUX_LED_PIN, LOW);
-  auxLedState = false;
-#endif
+  FastLED.show();
 }
 
 /**
@@ -605,11 +530,6 @@ void auxLedOff()
  */
 void startupFx()
 {
-  // facePlateClose();
-#ifdef MISSILE
-  missileBayClose(); // Start out with the missile bay in the closed position
-#endif
-
 #ifdef SOUND
   playSoundEffect(SND_CLOSE);
   simDelay(500); // Timing for Helmet Close Sound and delay to servo closing
@@ -621,14 +541,15 @@ void startupFx()
   {
   case EYES_NONE:
     ledEyesOn();
-    auxLedOn();
+    arcMode(1);
     break;
   case EYES_MOVIE_BLINK:
     movieblink();
+    arcMode(1);
     break;
   case EYES_FADE_ON:
     fadeEyesOn();
-    auxLedOn();
+    arcMode(1);
     break;
   }
 
@@ -647,13 +568,10 @@ void startupFx()
  */
 void facePlateOpenFx()
 {
-  // TODO: See if we need delays in between fx
 #ifdef SOUND
   playSoundEffect(SND_OPEN);
 #endif
-
   ledEyesOff();
-
   facePlateOpen();
 }
 
@@ -669,21 +587,17 @@ void facePlateCloseFx()
   simDelay(1200); // Timing for Helmet Close Sound and delay to servo closing
 #endif
 #endif
-
   facePlateClose();
-
   switch (EYES_FX)
   {
   case EYES_NONE:
     ledEyesOn();
-    auxLedOn();
     break;
   case EYES_MOVIE_BLINK:
     movieblink();
     break;
   case EYES_FADE_ON:
     fadeEyesOn();
-    auxLedOn();
     break;
   }
 }
@@ -702,30 +616,6 @@ void facePlateFx()
     facePlateOpenFx();
   }
 }
-
-#ifdef MISSILE
-void missileOpenFx()
-{
-  missileBayOpen();
-}
-
-void missileCloseFx()
-{
-  missileBayClose();
-}
-
-void missileFx()
-{
-  if (missileBayCurMode == MISSILE_BAY_OPEN)
-  {
-    missileCloseFx();
-  }
-  else
-  {
-    missileOpenFx();
-  }
-}
-#endif
 
 /**
  * Event handler for when the primary button is tapped once
@@ -751,13 +641,6 @@ void handlePrimaryButtonLongPress()
   ledEyesFade(); // Dim or brighten the LED eyes
 }
 
-#ifdef MISSILE
-void handleMissileButtonSingleTap()
-{
-  missileFx();
-}
-#endif
-
 /**
  * Event handler for when the primary button is pressed multiple times
  */
@@ -765,11 +648,28 @@ void handlePrimaryButtonMultiPress()
 {
   switch (primaryButton.getNumberClicks())
   {
+  case 3:
+#ifdef SOUND
+    playSoundEffect(SND_REPULSOR);
+#endif
+  break;
+
   case 4:
 #ifdef SOUND
-    playSoundEffect(6);
+    playSoundEffect(SND_NO_ACCESS);
+    BATTLEMODE = !BATTLEMODE;
+
+  if(BATTLEMODE){
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm)); 
+  }else{
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm)); 
+  }
+  FastLED.show();
+
 #endif
-    break;
+  break;
+
+
   default:
     break;
   }
@@ -786,15 +686,29 @@ void initPrimaryButton()
   primaryButton.attachMultiClick(handlePrimaryButtonMultiPress);
 }
 
-#ifdef MISSILE
-/**
- * Initializes the missile button for multi-functions
- */
-void initMissileButton()
+void initRepulsorButton()
 {
-  missileButton.attachClick(handleMissileButtonSingleTap);
+  repulsorButton.attachClick(handleRepulsorButtonSingleTap);
+  repulsorButton.attachMultiClick(handlePrimaryButtonMultiPress);
 }
-#endif
+
+/**
+ * Initializes the repulsor button */
+void handleRepulsorButtonSingleTap()
+{
+  repulsorFx();
+}
+
+/**
+ * Method to run special repulsor effects 
+ */
+void repulsorFx(){
+#ifdef SOUND
+  playSoundEffect(SND_REPULSOR);
+  simDelay(500); // Timing for Helmet Close Sound and delay to servo closing
+#endif  
+}
+
 
 /**
  * Monitor for when the primary button is pushed
@@ -803,16 +717,10 @@ void monitorPrimaryButton()
 {
   primaryButton.tick();
 }
-
-#ifdef MISSILE
-/**
- * Monitor for when the missile button is pushed
- */
-void monitorMissileButton()
+void monitorRepulsorButton()
 {
-  missileButton.tick();
+  repulsorButton.tick();
 }
-#endif
 
 void Task1code(void *pvParameters)
 {
@@ -820,6 +728,13 @@ void Task1code(void *pvParameters)
   Serial.println(xPortGetCoreID());
   for (;;)
   {
+   /* if(facePlateIsrMode == ISRSERVO_CLOSED){
+
+    }else if(facePlateIsrMode == ISRSERVO_OPEN){
+
+    }else{
+
+    }*/
     delay(1000);
   }
 }
@@ -831,10 +746,17 @@ void setup()
   Serial.print(F("Initializing Iron Man Servo version: "));
   Serial.println(VERSION);
 
+  FastLED.addLeds<WS2812B, DATA_PIN_1, GRB>(leds1, NUM_LEDS_1);
+  FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(leds2, NUM_LEDS_2);
+  fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, ledEyesMaxPwm));  // Arcstart
+  fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));    // Augenstart
+  FastLED.show();
+
+
   ESP32_ISR_Servos.useTimer(USE_ESP32_TIMER_NO);
   servoIndex1 = ESP32_ISR_Servos.setupServo(SERVO1_PIN, PWM_LOW, PWM_HIGH);
   servoIndex2 = ESP32_ISR_Servos.setupServo(SERVO2_PIN, PWM_LOW, PWM_HIGH);
-  
+
   if (servoIndex1 != -1)
   {
     Serial.println(F("Setup Servo1 OK"));
@@ -856,26 +778,23 @@ void setup()
   ESP32_ISR_Servos.setPosition(1, SERVO2_OPEN_POS);
 
 #ifdef SOUND
-init_player(); // initializes the sound player
-#endif
-startupFx();         // Run the initial features
-initPrimaryButton(); // initialize the primary button
-
-#ifdef MISSILE
-initMissileButton(); // initialize the missile button
-#else
-pinMode(AUX_LED_PIN, OUTPUT); // set output for AUX LED
+  init_player(); // initializes the sound player
 #endif
 
-xTaskCreatePinnedToCore(
-    Task1code, /* Task function. */
-    "Task1",   /* name of task. */
-    10000,     /* Stack size of task */
-    NULL,      /* parameter of the task */
-    1,         /* priority of the task */
-    &Task1,    /* Task handle to keep track of created task */
-    0);        /* pin task to core 0 */
-delay(500);
+  startupFx();         // Run the initial features
+
+  initPrimaryButton(); // initialize the primary button
+  initRepulsorButton(); // initialize the Repulsor button
+
+  xTaskCreatePinnedToCore(
+      Task1code, /* Task function. */
+      "Task1",   /* name of task. */
+      10000,     /* Stack size of task */
+      NULL,      /* parameter of the task */
+      1,         /* priority of the task */
+      &Task1,    /* Task handle to keep track of created task */
+      0);        /* pin task to core 0 */
+  delay(500);
 }
 
 /**
@@ -884,13 +803,11 @@ delay(500);
  */
 void loop()
 {
-  monitorPrimaryButton(); // Since all features currently are tied to the one button...
-
+  monitorPrimaryButton(); 
+  monitorRepulsorButton();
 #ifdef MISSILE
   monitorMissileButton(); // Monitor when the missile button is pushed...
 #endif
-
-  // Room for future features ;)
 }
 
 #if defined(SOUND) && (MP3_TYPE == DFPLAYER)

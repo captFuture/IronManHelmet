@@ -69,7 +69,7 @@
 ////////////////////////////////////////
   
 #elif defined(ESP32)
-  #warning Using ESP32-based board
+  //#warning Using ESP32-based board
   #define USING_ESP32_ISR_SERVO            true
 
 ////////////////////////////////////////
