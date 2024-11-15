@@ -41,14 +41,13 @@ DEVELOPED BY
 #include "OneButton.h"
 TaskHandle_t Task1;
 
-
 // Definitions for FastLED Library for rgb eyes
 // Anzahl der LEDs für jeden Strip
 #define NUM_LEDS_1 20
 #define NUM_LEDS_2 4
 
 // Pin-Definitionen für die LED-Strips
-#define DATA_PIN_1 21 
+#define DATA_PIN_1 21
 #define DATA_PIN_2 22
 
 // Pin-Definition für den Taster
@@ -59,7 +58,6 @@ CRGB leds1[NUM_LEDS_1];
 CRGB leds2[NUM_LEDS_2];
 
 bool BATTLEMODE = false;
-
 
 #ifdef SOUND
 #ifndef MP3_TYPE
@@ -88,12 +86,17 @@ void printDetail(uint8_t type, int value); // header method for implementation b
 
 #ifdef SOUND
 // Declare variables for sound control
-#define SND_CLOSE 1     // sound track for helmet closing sound
-#define SND_OPEN 3      // sound track for helmet opening sound
-#define SND_REPULSOR 4  // sound track for repulsor sound effect
-#define SND_JARVIS 2    // sound track for JARVIS sound
-#define SND_FRIDAY 5    // sound track for FRIDAY sound
-#define SND_NO_ACCESS 6 // sound track for "not authorized to access" sound
+#define SND_CLOSE 1    // sound track for helmet closing sound
+#define SND_OPEN 3     // sound track for helmet opening sound
+#define SND_REPULSOR 4 // sound track for repulsor sound effect
+#define SND_JARVIS 2   // sound track for JARVIS sound
+#define SND_FRIDAY 5   // sound track for FRIDAY sound
+#define SND_JARVIS2 6  // sound track for JARVIS sound
+
+#define SND_IAMIRONMAN 7 // sound track for i am ironman
+#define SND_REPULSOR2 8  // sound track for repulsor sound effect
+#define SND_REPULSOR3 9  // sound track for repulsor sound effect
+#define SND_REPULSOR4 10 // sound track for repulsor sound effect
 
 #if (MP3_TYPE == DFPLAYER)
 DFRobotDFPlayerMini mp3Obj; // Create object for DFPlayer Mini
@@ -122,7 +125,6 @@ OneButton repulsorButton = OneButton(BUTTON2_PIN, true, true);
 int facePlateCurMode = FACEPLATE_OPEN; // Keep track if the faceplate is open or closed
 int facePlateIsrMode = ISRSERVO_OPEN;
 
-
 // State of the LED eyes 1 = on, 2 = off
 #define LED_EYES_OFF 0
 #define LED_EYES_ON 1
@@ -133,9 +135,9 @@ int facePlateIsrMode = ISRSERVO_OPEN;
 
 int ledEyesCurMode = LED_EYES_DIM_MODE; // Keep track if we're dimming or brightening
 int ledEyesMinPwm = 0;
-int ledEyesCurPwm = 0;                  // Tracking the level of the LED eyes for dim/brighten feature
-int ledEyesMaxPwm = 255;                // limiting max brightness of leds ----------------------------------------------------------------------------
-const int ledEyesIncrement = 20;        // Define the increments to brighten or dim the LED eyes
+int ledEyesCurPwm = 0;           // Tracking the level of the LED eyes for dim/brighten feature
+int ledEyesMaxPwm = 255;         // limiting max brightness of leds ----------------------------------------------------------------------------
+const int ledEyesIncrement = 20; // Define the increments to brighten or dim the LED eyes
 
 /**
  * Helper Method
@@ -164,14 +166,17 @@ void movieblink()
   // pause for effect...
   simDelay(300);
 
-  if(BATTLEMODE){
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm)); 
-  }else{
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm)); 
+  if (BATTLEMODE)
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
   }
-  FastLED.show();
+  else
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
+  }
+  // FastLED.show();
 
-  int lowValue = ledEyesMaxPwm/2;
+  int lowValue = ledEyesMaxPwm / 2;
   int delayInterval[] = {210, 126, 84};
   int delayVal = 0;
 
@@ -230,12 +235,15 @@ void fadeEyesOn()
   ledEyesCurMode = LED_EYES_BRIGHTEN_MODE;
   Serial.println(F("Brightening LED eyes"));
 
-  if(BATTLEMODE){
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm)); 
-  }else{
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMinPwm)); 
+  if (BATTLEMODE)
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));
   }
-  FastLED.show();
+  else
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMinPwm));
+  }
+  // FastLED.show();
   ledEyesCurPwm = 0;
   // loop until fully lit
   while (ledEyesCurPwm < ledEyesMaxPwm)
@@ -393,13 +401,16 @@ void facePlateClose()
  */
 void setLedEyes(int pwmValue)
 {
-  if(BATTLEMODE){
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, pwmValue)); 
-  }else{
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, pwmValue)); 
+  if (BATTLEMODE)
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, pwmValue));
   }
-  //FastLED.setBrightness(pwmValue);
-  FastLED.show();
+  else
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, pwmValue));
+  }
+  // FastLED.setBrightness(pwmValue);
+  // FastLED.show();
   ledEyesCurPwm = pwmValue;
 }
 
@@ -409,12 +420,15 @@ void setLedEyes(int pwmValue)
 void ledEyesOn()
 {
   Serial.println(F("Turning LED eyes on..."));
-  if(BATTLEMODE){
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm)); 
-  }else{
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm)); 
+  if (BATTLEMODE)
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
   }
-  FastLED.show();
+  else
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
+  }
+  // FastLED.show();
   ledEyesCurMode = LED_EYES_DIM_MODE;
 }
 
@@ -424,12 +438,15 @@ void ledEyesOn()
 void ledEyesOff()
 {
   Serial.println(F("Turning LED eyes off..."));
-  if(BATTLEMODE){
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm)); 
-  }else{
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMinPwm)); 
+  if (BATTLEMODE)
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));
   }
-  FastLED.show();
+  else
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMinPwm));
+  }
+  // FastLED.show();
   ledEyesCurMode = LED_EYES_BRIGHTEN_MODE;
 }
 
@@ -439,20 +456,20 @@ void ledEyesOff()
 void ledEyesOnOff()
 {
   // LED eyes stay off when faceplate is open
-  //if (facePlateCurMode == FACEPLATE_CLOSED)
+  // if (facePlateCurMode == FACEPLATE_CLOSED)
   //{
-    if (ledEyesCurPwm > 0)
-    {
-      ledEyesOff();
-      arcMode(1);
-      ledEyesCurPwm = 0;
-    }
-    else
-    {
-      ledEyesOn();
-      arcMode(1);
-      ledEyesCurPwm = ledEyesMaxPwm;
-    }
+  if (ledEyesCurPwm > 0)
+  {
+    ledEyesOff();
+    arcMode(1);
+    ledEyesCurPwm = 0;
+  }
+  else
+  {
+    ledEyesOn();
+    arcMode(1);
+    ledEyesCurPwm = ledEyesMaxPwm;
+  }
   //}
 }
 
@@ -485,10 +502,13 @@ void ledEyesBrighten()
  */
 void ledEyesFade()
 {
-  if(BATTLEMODE){
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm)); 
-  }else{
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm)); 
+  if (BATTLEMODE)
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
+  }
+  else
+  {
+    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
   }
 
   if (ledEyesCurPwm == ledEyesMaxPwm)
@@ -512,17 +532,20 @@ void ledEyesFade()
   setLedEyes(ledEyesCurPwm);
   arcMode(1);
   simDelay(200);
-  FastLED.show();
+  // FastLED.show();
 }
 
-
-void arcMode(uint8_t mode){
-  if(BATTLEMODE){
-    fill_solid(leds1, NUM_LEDS_1, CHSV(0, 255, ledEyesMaxPwm)); 
-  }else{
-    fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, ledEyesMaxPwm)); 
+void arcMode(uint8_t mode)
+{
+  if (BATTLEMODE)
+  {
+    fill_solid(leds1, NUM_LEDS_1, CHSV(0, 255, ledEyesMaxPwm));
   }
-  FastLED.show();
+  else
+  {
+    fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, ledEyesMaxPwm));
+  }
+  // FastLED.show();
 }
 
 /**
@@ -650,26 +673,51 @@ void handlePrimaryButtonMultiPress()
   {
   case 3:
 #ifdef SOUND
-    playSoundEffect(SND_REPULSOR);
+    Serial.println("SND_IAMIRONMAN");
+    playSoundEffect(SND_IAMIRONMAN);
 #endif
-  break;
+    break;
 
   case 4:
 #ifdef SOUND
-    playSoundEffect(SND_NO_ACCESS);
+    Serial.println("SND_JARVIS2");
+    playSoundEffect(SND_JARVIS2);
     BATTLEMODE = !BATTLEMODE;
 
-  if(BATTLEMODE){
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm)); 
-  }else{
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm)); 
-  }
-  FastLED.show();
-
+    if (BATTLEMODE)
+    {
+      fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
+    }
+    else
+    {
+      fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
+    }
 #endif
-  break;
+    break;
 
+  default:
+    break;
+  }
+}
 
+/**
+ * Event handler for when the repulsor button is pressed multiple times
+ */
+void handleRepulsorButtonMultiPress()
+{
+  switch (repulsorButton.getNumberClicks())
+  {
+  case 3:
+#ifdef SOUND
+    repulsorFx(9);
+#endif
+    break;
+
+  case 4:
+#ifdef SOUND
+    repulsorFx(10);
+#endif
+    break;
   default:
     break;
   }
@@ -689,26 +737,46 @@ void initPrimaryButton()
 void initRepulsorButton()
 {
   repulsorButton.attachClick(handleRepulsorButtonSingleTap);
-  repulsorButton.attachMultiClick(handlePrimaryButtonMultiPress);
+  repulsorButton.attachDoubleClick(handleRepulsorButtonDoubleTap);
+  repulsorButton.attachMultiClick(handleRepulsorButtonMultiPress);
 }
 
 /**
  * Initializes the repulsor button */
 void handleRepulsorButtonSingleTap()
 {
-  repulsorFx();
+  repulsorFx(4);
 }
 
 /**
- * Method to run special repulsor effects 
- */
-void repulsorFx(){
-#ifdef SOUND
-  playSoundEffect(SND_REPULSOR);
-  simDelay(500); // Timing for Helmet Close Sound and delay to servo closing
-#endif  
+ * Event handler for when the primary button is double tapped */
+void handleRepulsorButtonDoubleTap()
+{
+  repulsorFx(8);
 }
 
+/**
+ * Method to run special repulsor effects
+ */
+void repulsorFx(int sound)
+{
+#ifdef SOUND
+  playSoundEffect(sound);
+  simDelay(600);
+#endif
+  Serial.println("Repulsorflash");
+  for (int i = 0; i < ledEyesMaxPwm; i = i + 20)
+  {
+    fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, i));
+    FastLED.show();
+    simDelay(50);
+  }
+  fill_solid(leds1, NUM_LEDS_1, CHSV(100, 0, 255));
+  FastLED.show();
+  simDelay(200);
+  fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, ledEyesMaxPwm));
+  FastLED.show();
+}
 
 /**
  * Monitor for when the primary button is pushed
@@ -728,13 +796,13 @@ void Task1code(void *pvParameters)
   Serial.println(xPortGetCoreID());
   for (;;)
   {
-   /* if(facePlateIsrMode == ISRSERVO_CLOSED){
+    /* if(facePlateIsrMode == ISRSERVO_CLOSED){
 
-    }else if(facePlateIsrMode == ISRSERVO_OPEN){
+     }else if(facePlateIsrMode == ISRSERVO_OPEN){
 
-    }else{
+     }else{
 
-    }*/
+     }*/
     delay(1000);
   }
 }
@@ -748,10 +816,9 @@ void setup()
 
   FastLED.addLeds<WS2812B, DATA_PIN_1, GRB>(leds1, NUM_LEDS_1);
   FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(leds2, NUM_LEDS_2);
-  fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, ledEyesMaxPwm));  // Arcstart
-  fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));    // Augenstart
-  FastLED.show();
-
+  fill_solid(leds1, NUM_LEDS_1, CHSV(96, 255, ledEyesMaxPwm)); // Arcstart
+  fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));  // Augenstart
+  // FastLED.show();
 
   ESP32_ISR_Servos.useTimer(USE_ESP32_TIMER_NO);
   servoIndex1 = ESP32_ISR_Servos.setupServo(SERVO1_PIN, PWM_LOW, PWM_HIGH);
@@ -781,9 +848,9 @@ void setup()
   init_player(); // initializes the sound player
 #endif
 
-  startupFx();         // Run the initial features
+  startupFx(); // Run the initial features
 
-  initPrimaryButton(); // initialize the primary button
+  initPrimaryButton();  // initialize the primary button
   initRepulsorButton(); // initialize the Repulsor button
 
   xTaskCreatePinnedToCore(
@@ -803,8 +870,9 @@ void setup()
  */
 void loop()
 {
-  monitorPrimaryButton(); 
+  monitorPrimaryButton();
   monitorRepulsorButton();
+  FastLED.show();
 #ifdef MISSILE
   monitorMissileButton(); // Monitor when the missile button is pushed...
 #endif
