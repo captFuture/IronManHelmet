@@ -38,7 +38,6 @@ DEVELOPED BY
 #include "ESP32_New_ISR_Servo.h"
 #include <FastLED.h>
 #include "OneButton.h"
-TaskHandle_t Task1;
 
 // Array für die LED-Daten
 CRGB leds1[NUM_LEDS_1];
@@ -355,9 +354,6 @@ void ledEyesOff()
  */
 void ledEyesOnOff()
 {
-  // LED eyes stay off when faceplate is open
-  // if (facePlateCurMode == FACEPLATE_CLOSED)
-  //{
   if (ledEyesCurPwm > 0)
   {
     ledEyesOff();
@@ -370,7 +366,6 @@ void ledEyesOnOff()
     arcMode(1);
     ledEyesCurPwm = ledEyesMaxPwm;
   }
-  //}
 }
 
 void ledEyesDim()
@@ -664,23 +659,6 @@ void monitorRepulsorButton()
   repulsorButton.tick();
 }
 
-void Task1code(void *pvParameters)
-{
-  Serial.print("ServoTaskCode running on core ");
-  Serial.println(xPortGetCoreID());
-  for (;;)
-  {
-    /*if(facePlateIsrMode == ISRSERVO_CLOSED){
-
-     }else if(facePlateIsrMode == ISRSERVO_OPEN){
-
-     }else{
-
-     }*/
-    delay(1000);
-  }
-}
-
 void setup()
 {
   Serial.begin(115200);
@@ -691,7 +669,7 @@ void setup()
   FastLED.addLeds<WS2812B, DATA_PIN_1, GRB>(leds1, NUM_LEDS_1);
   FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(leds2, NUM_LEDS_2);
   fill_solid(leds1, NUM_LEDS_1, CHSV(96, 255, ledEyesMaxPwm)); // Arcstart
-  fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));  // Augenstart
+  fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));  // Eyestart
   FastLED.show();
 
   ESP32_ISR_Servos.useTimer(USE_ESP32_TIMER_NO);
@@ -724,15 +702,6 @@ void setup()
   initPrimaryButton();  // initialize the primary button
   initRepulsorButton(); // initialize the Repulsor button
 
-  xTaskCreatePinnedToCore(
-      Task1code, /* Task function. */
-      "Task1",   /* name of task. */
-      10000,     /* Stack size of task */
-      NULL,      /* parameter of the task */
-      1,         /* priority of the task */
-      &Task1,    /* Task handle to keep track of created task */
-      0);        /* pin task to core 0 */
-  delay(500);
 }
 
 /**
