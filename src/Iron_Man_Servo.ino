@@ -1,5 +1,4 @@
 /*
-
 MIT License
 
 Copyright (c) 2024 captFuture
@@ -41,50 +40,13 @@ DEVELOPED BY
 #include "OneButton.h"
 TaskHandle_t Task1;
 
-// Definitions for FastLED Library for rgb eyes
-// Anzahl der LEDs für jeden Strip
-#define NUM_LEDS_1 20
-#define NUM_LEDS_2 4
-
-// Pin-Definitionen für die LED-Strips
-#define DATA_PIN_1 21
-#define DATA_PIN_2 22
-
-// Pin-Definition für den Taster
-#define BUTTON_PIN 32
-
 // Array für die LED-Daten
 CRGB leds1[NUM_LEDS_1];
 CRGB leds2[NUM_LEDS_2];
 
-bool BATTLEMODE = false;
-
-#ifdef SOUND
-#ifndef MP3_TYPE
-#error MP3_TYPE not defined.  MP3_TYPE is required.
-#endif
-
-#ifndef SND_EFFECT_TYPE
-#error SND_EFFECT_TYPE not defined.  SND_EFFECT_TYPE is required.
-#endif
-
-#if (MP3_TYPE == DFPLAYER)
 #include "DFRobotDFPlayerMini.cpp"
 void printDetail(uint8_t type, int value); // header method for implementation below; affects C++ compilers
-#endif
 
-#if (MP3_TYPE == JQ6500)
-// For installation instructions see: https://github.com/sleemanj/JQ6500_Serial
-#include "lib/JQ6500_Serial/src/JQ6500_Serial.cpp"
-#endif
-
-#if (MP3_TYPE == I2S)
-
-#endif
-
-#endif
-
-#ifdef SOUND
 // Declare variables for sound control
 #define SND_CLOSE 1    // sound track for helmet closing sound
 #define SND_OPEN 3     // sound track for helmet opening sound
@@ -98,14 +60,7 @@ void printDetail(uint8_t type, int value); // header method for implementation b
 #define SND_REPULSOR3 9  // sound track for repulsor sound effect
 #define SND_REPULSOR4 10 // sound track for repulsor sound effect
 
-#if (MP3_TYPE == DFPLAYER)
 DFRobotDFPlayerMini mp3Obj; // Create object for DFPlayer Mini
-#endif
-
-#if (MP3_TYPE == JQ6500)
-JQ6500_Serial mp3Obj(Serial2); // Create object for JQ6500 module
-#endif
-#endif
 
 // Define object for buttons to handle
 // multiple button press features:
@@ -136,7 +91,7 @@ int facePlateIsrMode = ISRSERVO_OPEN;
 int ledEyesCurMode = LED_EYES_DIM_MODE; // Keep track if we're dimming or brightening
 int ledEyesMinPwm = 0;
 int ledEyesCurPwm = 0;           // Tracking the level of the LED eyes for dim/brighten feature
-int ledEyesMaxPwm = 255;         // limiting max brightness of leds ----------------------------------------------------------------------------
+int ledEyesMaxPwm = 128;         // limiting max brightness of leds
 const int ledEyesIncrement = 20; // Define the increments to brighten or dim the LED eyes
 
 /**
@@ -166,7 +121,7 @@ void movieblink()
   // pause for effect...
   simDelay(300);
 
-  if (BATTLEMODE)
+  if (battlemode)
   {
     fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
   }
@@ -174,7 +129,7 @@ void movieblink()
   {
     fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
   }
-  // FastLED.show();
+  FastLED.show();
 
   int lowValue = ledEyesMaxPwm / 2;
   int delayInterval[] = {210, 126, 84};
@@ -215,16 +170,9 @@ void movieblink()
   // All on
   setLedEyes(ledEyesMaxPwm);
 
-#if defined(SOUND) && (MP3_TYPE == JQ6500)
-#if (SND_EFFECT_TYPE == JARVIS)
   playSoundEffect(SND_JARVIS);
-
   simDelay(1000);
   mp3Obj.sleep();
-#else
-  playSoundEffect(SND_FRIDAY);
-#endif
-#endif
 }
 
 /*
@@ -235,7 +183,7 @@ void fadeEyesOn()
   ledEyesCurMode = LED_EYES_BRIGHTEN_MODE;
   Serial.println(F("Brightening LED eyes"));
 
-  if (BATTLEMODE)
+  if (battlemode)
   {
     fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));
   }
@@ -254,8 +202,6 @@ void fadeEyesOn()
   }
 }
 
-#ifdef SOUND
-#if (MP3_TYPE == DFPLAYER)
 /**
  * Initialization method for DFPlayer Mini board
  */
@@ -312,51 +258,6 @@ void playSoundEffect(int soundEffect)
   mp3Obj.play(soundEffect);
   printDetail(mp3Obj.readType(), mp3Obj.read()); // Print the detail message from DFPlayer to handle different errors and states.
 }
-#endif
-
-#if (MP3_TYPE == JQ6500)
-/**
- * Initialization method for MP3 player module
- */
-void init_player()
-{
-  Serial2.begin(9600);
-  // simDelay(1000); Adjusting Timing Sequence
-
-  if (!Serial2.available())
-  {
-    Serial.println(F("Serial object not available."));
-  }
-
-  Serial.println(F("Initializing JQ6500..."));
-
-  mp3Obj.reset();
-  mp3Obj.setSource(MP3_SRC_BUILTIN);
-  mp3Obj.setVolume(VOLUME);
-  mp3Obj.setLoopMode(MP3_LOOP_NONE);
-
-  simDelay(500);
-}
-
-/**
- * Method to play the sound effect for a specified feature
- */
-void playSoundEffect(int soundEffect)
-{
-  Serial.print(F("Playing sound effect: "));
-  Serial.print(soundEffect);
-  mp3Obj.playFileByIndexNumber(soundEffect);
-}
-
-void delayWhilePlaying()
-{
-  while (mp3Obj.getStatus() == MP3_STATUS_PLAYING)
-  {
-    int x = 0;
-  }
-}
-#endif
-#endif
 
 /**
  * Method to open face plate
@@ -401,7 +302,7 @@ void facePlateClose()
  */
 void setLedEyes(int pwmValue)
 {
-  if (BATTLEMODE)
+  if (battlemode)
   {
     fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, pwmValue));
   }
@@ -409,8 +310,7 @@ void setLedEyes(int pwmValue)
   {
     fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, pwmValue));
   }
-  // FastLED.setBrightness(pwmValue);
-  // FastLED.show();
+  FastLED.show();
   ledEyesCurPwm = pwmValue;
 }
 
@@ -420,7 +320,7 @@ void setLedEyes(int pwmValue)
 void ledEyesOn()
 {
   Serial.println(F("Turning LED eyes on..."));
-  if (BATTLEMODE)
+  if (battlemode)
   {
     fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
   }
@@ -438,7 +338,7 @@ void ledEyesOn()
 void ledEyesOff()
 {
   Serial.println(F("Turning LED eyes off..."));
-  if (BATTLEMODE)
+  if (battlemode)
   {
     fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));
   }
@@ -502,7 +402,7 @@ void ledEyesBrighten()
  */
 void ledEyesFade()
 {
-  if (BATTLEMODE)
+  if (battlemode)
   {
     fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
   }
@@ -537,7 +437,7 @@ void ledEyesFade()
 
 void arcMode(uint8_t mode)
 {
-  if (BATTLEMODE)
+  if (battlemode)
   {
     fill_solid(leds1, NUM_LEDS_1, CHSV(0, 255, ledEyesMaxPwm));
   }
@@ -553,11 +453,8 @@ void arcMode(uint8_t mode)
  */
 void startupFx()
 {
-#ifdef SOUND
   playSoundEffect(SND_CLOSE);
   simDelay(500); // Timing for Helmet Close Sound and delay to servo closing
-#endif
-
   facePlateClose();
 
   switch (SETUP_FX)
@@ -576,14 +473,8 @@ void startupFx()
     break;
   }
 
-#if defined(SOUND) && (MP3_TYPE == DFPLAYER)
   simDelay(500); // Originally 2000ms
-#if (SND_EFFECT_TYPE == JARVIS)
   playSoundEffect(SND_JARVIS);
-#else
-  playSoundEffect(SND_FRIDAY);
-#endif
-#endif
 }
 
 /**
@@ -591,9 +482,7 @@ void startupFx()
  */
 void facePlateOpenFx()
 {
-#ifdef SOUND
   playSoundEffect(SND_OPEN);
-#endif
   ledEyesOff();
   facePlateOpen();
 }
@@ -603,13 +492,8 @@ void facePlateOpenFx()
  */
 void facePlateCloseFx()
 {
-#ifdef SOUND
   playSoundEffect(SND_CLOSE);
-
-#if (MP3_TYPE == DFPLAYER)
   simDelay(1200); // Timing for Helmet Close Sound and delay to servo closing
-#endif
-#endif
   facePlateClose();
   switch (EYES_FX)
   {
@@ -672,19 +556,16 @@ void handlePrimaryButtonMultiPress()
   switch (primaryButton.getNumberClicks())
   {
   case 3:
-#ifdef SOUND
     Serial.println("SND_IAMIRONMAN");
     playSoundEffect(SND_IAMIRONMAN);
-#endif
     break;
 
   case 4:
-#ifdef SOUND
     Serial.println("SND_JARVIS2");
     playSoundEffect(SND_JARVIS2);
-    BATTLEMODE = !BATTLEMODE;
+    battlemode = !battlemode;
 
-    if (BATTLEMODE)
+    if (battlemode)
     {
       fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
     }
@@ -692,7 +573,6 @@ void handlePrimaryButtonMultiPress()
     {
       fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
     }
-#endif
     break;
 
   default:
@@ -708,15 +588,11 @@ void handleRepulsorButtonMultiPress()
   switch (repulsorButton.getNumberClicks())
   {
   case 3:
-#ifdef SOUND
     repulsorFx(9);
-#endif
     break;
 
   case 4:
-#ifdef SOUND
     repulsorFx(10);
-#endif
     break;
   default:
     break;
@@ -760,10 +636,8 @@ void handleRepulsorButtonDoubleTap()
  */
 void repulsorFx(int sound)
 {
-#ifdef SOUND
   playSoundEffect(sound);
   simDelay(600);
-#endif
   Serial.println("Repulsorflash");
   for (int i = 0; i < ledEyesMaxPwm; i = i + 20)
   {
@@ -796,7 +670,7 @@ void Task1code(void *pvParameters)
   Serial.println(xPortGetCoreID());
   for (;;)
   {
-    /* if(facePlateIsrMode == ISRSERVO_CLOSED){
+    /*if(facePlateIsrMode == ISRSERVO_CLOSED){
 
      }else if(facePlateIsrMode == ISRSERVO_OPEN){
 
@@ -818,7 +692,7 @@ void setup()
   FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(leds2, NUM_LEDS_2);
   fill_solid(leds1, NUM_LEDS_1, CHSV(96, 255, ledEyesMaxPwm)); // Arcstart
   fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));  // Augenstart
-  // FastLED.show();
+  FastLED.show();
 
   ESP32_ISR_Servos.useTimer(USE_ESP32_TIMER_NO);
   servoIndex1 = ESP32_ISR_Servos.setupServo(SERVO1_PIN, PWM_LOW, PWM_HIGH);
@@ -844,11 +718,8 @@ void setup()
   ESP32_ISR_Servos.setPosition(0, SERVO1_OPEN_POS);
   ESP32_ISR_Servos.setPosition(1, SERVO2_OPEN_POS);
 
-#ifdef SOUND
   init_player(); // initializes the sound player
-#endif
-
-  startupFx(); // Run the initial features
+  startupFx();   // Run the initial features
 
   initPrimaryButton();  // initialize the primary button
   initRepulsorButton(); // initialize the Repulsor button
@@ -873,12 +744,8 @@ void loop()
   monitorPrimaryButton();
   monitorRepulsorButton();
   FastLED.show();
-#ifdef MISSILE
-  monitorMissileButton(); // Monitor when the missile button is pushed...
-#endif
 }
 
-#if defined(SOUND) && (MP3_TYPE == DFPLAYER)
 /**
  * Method to output any issues with the DFPlayer
  */
@@ -939,4 +806,3 @@ void printDetail(uint8_t type, int value)
     break;
   }
 }
-#endif

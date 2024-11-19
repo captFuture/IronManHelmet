@@ -33,6 +33,11 @@ DEVELOPED BY
 
  */
 
+// Definitions for FastLED Library for rgb eyes
+// Count of Leds for Repulsor/arc and eyes
+#define NUM_LEDS_1 20
+#define NUM_LEDS_2 4
+
 #define TIMER_INTERRUPT_DEBUG       1
 #define ISR_SERVO_DEBUG             1
 
@@ -42,31 +47,13 @@ DEVELOPED BY
 int servoIndex1  = -1;
 int servoIndex2  = -1;
 
-// Uncomment this line to enable sound
-#define SOUND
-
-#ifdef SOUND
-
-#define DFPLAYER 0 
-#define JQ6500 1
-#define I2S 2
-
-#define MP3_TYPE DFPLAYER // Uncomment this line to enable using the DFRobot DFPlayer (or similar) sound module
-//#define MP3_TYPE JQ6500 // Uncomment this line to enable using the JQ6500 sound module
-//#define MP3_TYPE I2S // Uncomment this line to enable using the esp32 sound capabilities with an i2s sound output module
-
-#define JARVIS 0
-#define FRIDAY 1
-
-#define SND_EFFECT_TYPE JARVIS // Uncomment this line for JARVIS sound effects
-//#define SND_EFFECT_TYPE FRIDAY // Uncomment this line for FRIDAY sound effects
+bool battlemode = false;
 
 // sound board pins
 #define RX_PIN 16 // set pin for receive (RX) communications
 #define TX_PIN 17 // set pin for transmit (TX) communications
 
 #define VOLUME 25 // sound board volume level (30 is max)
-#endif
 
 // Servo configuration types.  Use one of these values to set the SERVO_TYPE definition below
 #define TPMG90S 0
@@ -111,11 +98,8 @@ static const int SERVO2_PIN = 19; // set the pin for servo 2
 #define BUTTON_PIN 32 // the pin that the pushbutton is attached to
 #define BUTTON2_PIN 12 // the pin that the repulsor pushbutton is attached to
 
-// repulsor connection
-#define REPULSOR_PIN  27 // Repulsor light
-
-// led control pin
-#define RIGHT_EYE_PIN 25 // right eye LEDs
+#define DATA_PIN_1 21 // Eye Leds
+#define DATA_PIN_2 22 // Arc+Repulsor Leds
 
 // Declare variables for setup special effects (applies to LED eyes only for now)
 // Declare variables for LED eyes special effects (applies to LED eyes only for now)
