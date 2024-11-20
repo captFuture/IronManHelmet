@@ -53,91 +53,9 @@ DEVELOPED BY
 #define SND_REPULSOR4 10 // sound track for repulsor sound effect
 
 #define VERSION "0.2"
-
-//#define INTERNALAUDIO
-#ifdef INTERNALAUDIO
-#include <AudioOutput.h>
-#include <AudioFileSourceSD.h>
-#include <AudioFileSourceID3.h>
-#include <AudioGeneratorMP3.h>
-static constexpr uint8_t m5spk_virtual_channel = 0;
-
-static constexpr const char *filename[] =
-    {
-        "/mp3/0001.mp3",
-        "/mp3/0001.mp3",
-        "/mp3/0002.mp3",
-        "/mp3/0003.mp3",
-        "/mp3/0004.mp3",
-        "/mp3/0005.mp3",
-        "/mp3/0006.mp3",
-        "/mp3/0007.mp3",
-        "/mp3/0008.mp3",
-        "/mp3/0009.mp3",
-        "/mp3/00010.mp3",
-};
-static constexpr const size_t filecount = sizeof(filename) / sizeof(filename[0]);
-
-class AudioOutputM5Speaker : public AudioOutput
-{
-public:
-  AudioOutputM5Speaker(m5::Speaker_Class *m5sound, uint8_t virtual_sound_channel = 0)
-  {
-    _m5sound = m5sound;
-    _virtual_ch = virtual_sound_channel;
-  }
-  virtual ~AudioOutputM5Speaker(void) {};
-  virtual bool begin(void) override { return true; }
-  virtual bool ConsumeSample(int16_t sample[2]) override
-  {
-    if (_tri_buffer_index < tri_buf_size)
-    {
-      _tri_buffer[_tri_index][_tri_buffer_index] = sample[0];
-      _tri_buffer[_tri_index][_tri_buffer_index + 1] = sample[1];
-      _tri_buffer_index += 2;
-
-      return true;
-    }
-
-    flush();
-    return false;
-  }
-  virtual void flush(void) override
-  {
-    if (_tri_buffer_index)
-    {
-      _m5sound->playRaw(_tri_buffer[_tri_index], _tri_buffer_index, hertz, true, 1, _virtual_ch);
-      _tri_index = _tri_index < 2 ? _tri_index + 1 : 0;
-      _tri_buffer_index = 0;
-    }
-  }
-  virtual bool stop(void) override
-  {
-    flush();
-    _m5sound->stop(_virtual_ch);
-    return true;
-  }
-
-  const int16_t *getBuffer(void) const { return _tri_buffer[(_tri_index + 2) % 3]; }
-
-protected:
-  m5::Speaker_Class *_m5sound;
-  uint8_t _virtual_ch;
-  static constexpr size_t tri_buf_size = 1536;
-  int16_t _tri_buffer[3][tri_buf_size];
-  size_t _tri_buffer_index = 0;
-  size_t _tri_index = 0;
-};
-
-static AudioFileSourceSD file;
-static AudioOutputM5Speaker out(&M5.Speaker, m5spk_virtual_channel);
-static AudioGeneratorMP3 mp3;
-static AudioFileSourceID3 *id3 = nullptr;
-#else
 #include "DFRobotDFPlayerMini.cpp"
 void printDetail(uint8_t type, int value); // header method for implementation below; affects C++ compilers
 DFRobotDFPlayerMini mp3Obj;                // Create object for DFPlayer Mini
-#endif
 
 // Array für die LED-Daten
 CRGB leds1[NUM_LEDS_1];
@@ -245,11 +163,7 @@ void movieblink()
   playSoundEffect(SND_JARVIS);
   simDelay(1000);
 
-#ifdef INTERNALAUDIO
-
-#else
   mp3Obj.sleep();
-#endif
 }
 
 /*
@@ -280,9 +194,6 @@ void fadeEyesOn()
   }
 }
 
-#ifdef INTERNALAUDIO
-
-#else
 /**
  * Initialization method for DFPlayer Mini board
  */
@@ -322,19 +233,6 @@ void init_player()
   mp3Obj.outputDevice(DFPLAYER_DEVICE_SD);
   simDelay(100); // DFRobot Timing 9-9-2022
 }
-#endif
-
-#ifdef INTERNALAUDIO
-void playSoundEffect(int soundEffect)
-{
-  Serial.print(F("Playing internal sound effect: "));
-  Serial.println(soundEffect);
-  file.open(filename[soundEffect]);
-  id3 = new AudioFileSourceID3(&file);
-  id3->open(filename[soundEffect]);
-  mp3.begin(id3, &out);
-}
-#else
 
 /**
  * Method to play the sound effect for a specified feature
@@ -351,7 +249,6 @@ void playSoundEffect(int soundEffect)
   mp3Obj.play(soundEffect);
   printDetail(mp3Obj.readType(), mp3Obj.read()); // Print the detail message from DFPlayer to handle different errors and states.
 }
-#endif
 
 /**
  * Method to open face plate
@@ -473,7 +370,6 @@ void ledEyesDim()
   {
     ledEyesCurPwm = 0;
   }
-
 }
 
 void ledEyesBrighten()
@@ -486,7 +382,6 @@ void ledEyesBrighten()
   {
     ledEyesCurPwm = ledEyesMaxPwm;
   }
-
 }
 
 /**
@@ -547,7 +442,7 @@ void startupFx()
 {
   playSoundEffect(SND_CLOSE);
   simDelay(500); // Timing for Helmet Close Sound and delay to servo closing
-  
+
   facePlateClose();
 
   switch (SETUP_FX)
@@ -568,7 +463,6 @@ void startupFx()
 
   simDelay(500);
   playSoundEffect(SND_JARVIS);
-  
 }
 
 /**
@@ -705,15 +599,7 @@ void setup()
   {
     M5.delay(500);
   }
-#ifdef INTERNALAUDIO
-  { /// custom setting
-    auto spk_cfg = M5.Speaker.config();
-    spk_cfg.sample_rate = 96000;
-    M5.Speaker.config(spk_cfg);
-  }
 
-  M5.Speaker.begin();
-#else
   { /// custom setting
     auto spk_cfg = M5.Speaker.config();
     spk_cfg.sample_rate = 96000;
@@ -723,7 +609,6 @@ void setup()
   M5.Speaker.begin();
   M5.Speaker.setVolume(0);
   init_player(); // initializes the sound player
-#endif
 
   M5.Display.setEpdMode(epd_mode_t::epd_fastest);
   M5.Display.fillScreen(TFT_BLACK);
@@ -829,26 +714,8 @@ void loop()
 
   FastLED.show();
   M5.update();
-#ifdef INTERNALAUDIO
-
-  if (mp3.isRunning())
-  {
-    if (!mp3.loop())
-    {
-      mp3.stop();
-    }
-  }
-  else
-  {
-    M5.delay(1);
-  }
-
-#else
-
-#endif
 }
 
-#ifndef INTERNALAUDIO
 /**
  * Method to output any issues with the DFPlayer
  */
@@ -909,4 +776,3 @@ void printDetail(uint8_t type, int value)
     break;
   }
 }
-#endif
