@@ -1,5 +1,5 @@
 /*
- 
+
 MIT License
 
 Copyright (c) 2024 captFuture
@@ -38,14 +38,14 @@ DEVELOPED BY
 #define NUM_LEDS_1 20
 #define NUM_LEDS_2 4
 
-#define TIMER_INTERRUPT_DEBUG       1
-#define ISR_SERVO_DEBUG             1
+#define TIMER_INTERRUPT_DEBUG 1
+#define ISR_SERVO_DEBUG 1
 
 // Select different ESP32 timer number (0-3) to avoid conflict
-#define USE_ESP32_TIMER_NO          3
-#define NUM_SERVOS    2
-int servoIndex1  = -1;
-int servoIndex2  = -1;
+#define USE_ESP32_TIMER_NO 3
+#define NUM_SERVOS 2
+int servoIndex1 = -1;
+int servoIndex2 = -1;
 
 bool battlemode = false;
 
@@ -58,20 +58,20 @@ bool battlemode = false;
 // Servo configuration types.  Use one of these values to set the SERVO_TYPE definition below
 #define TPMG90S 0
 #define GENERIC 1
-#define MANUAL  2
+#define MANUAL 2
 
 // Defines which servo type is used
-//#define SERVO_TYPE TPMG90S // Uncomment this line if you are using genuine Tower Pro MG90S servos
-//#define SERVO_TYPE GENERIC // Uncomment this line if you are using generic servos
+// #define SERVO_TYPE TPMG90S // Uncomment this line if you are using genuine Tower Pro MG90S servos
+// #define SERVO_TYPE GENERIC // Uncomment this line if you are using generic servos
 #define SERVO_TYPE MANUAL // Uncomment this line if you are manually configuring your servos in the manual configuration below
 
-#if  (SERVO_TYPE == TPMG90S)
+#if (SERVO_TYPE == TPMG90S)
 static const int PWM_HIGH = 2400; // Authentic Tower Pro MG90s Servo using 12% Duty Cycle
-static const int PWM_LOW = 400; // Authentic Tower Pro MG90s Servo using 2% Duty Cycle
+static const int PWM_LOW = 400;   // Authentic Tower Pro MG90s Servo using 2% Duty Cycle
 
 #elif (SERVO_TYPE == GENERIC)
-static const int PWM_HIGH = 2500;// Generic MG90s Servo using 13% Duty Cycle
-static const int PWM_LOW = 200; // Generic MG90s Servo using 1% Duty Cycle
+static const int PWM_HIGH = 2500; // Generic MG90s Servo using 13% Duty Cycle
+static const int PWM_LOW = 200;   // Generic MG90s Servo using 1% Duty Cycle
 
 // Use these settings for manual configuration of servos
 #elif (SERVO_TYPE == MANUAL)
@@ -80,38 +80,38 @@ static const int PWM_LOW = 400;
 #endif
 
 // Declare pin settings
-static const int SERVO1_PIN = 18; // set the pin for servo 1
-static const int SERVO2_PIN = 19; // set the pin for servo 2
+static const int SERVO1_PIN = 2; // set the pin for servo 1
+static const int SERVO2_PIN = 5; // set the pin for servo 2
 
 // Declare variables for servo speed control
 #define SERVO_CLOSE_SPEED 175 // set the speed of the servo close function
-#define SERVO_OPEN_SPEED 255 // set the speed of the servo opening recommend set to max speed to aid in lift
+#define SERVO_OPEN_SPEED 255  // set the speed of the servo opening recommend set to max speed to aid in lift
 
-// In Dual Servo Configuration the servos move in opposing directions, so the angles of the servos will be opposite to each other. 
+// In Dual Servo Configuration the servos move in opposing directions, so the angles of the servos will be opposite to each other.
 // Normal Servo range is 0° ~ 180°, for initial setup the range has been adjusted to 20° ~ 160°, this allows for a 20° adjustment at both ends of the servo range.
-// See Helmet tutorial for further information on servo setup.
-#define SERVO1_OPEN_POS 20  // set the open position of servo 1
-#define SERVO2_OPEN_POS 160 // set the open position of servo 2
+
+#define SERVO1_OPEN_POS 20   // set the open position of servo 1
+#define SERVO2_OPEN_POS 160  // set the open position of servo 2
 #define SERVO1_CLOSE_POS 160 // set the closed position of servo 1
-#define SERVO2_CLOSE_POS 20 // set the closed position of servo 2
+#define SERVO2_CLOSE_POS 20  // set the closed position of servo 2
 
-#define BUTTON_PIN 32 // the pin that the pushbutton is attached to
-#define BUTTON2_PIN 12 // the pin that the repulsor pushbutton is attached to
+#define BUTTON_PIN 39  // the pin that the pushbutton is attached to
+#define BUTTON2_PIN 38 // the pin that the repulsor pushbutton is attached to
 
-#define DATA_PIN_1 21 // Eye Leds
-#define DATA_PIN_2 22 // Arc+Repulsor Leds
+#define DATA_PIN_1 25 // Eye Leds
+#define DATA_PIN_2 26 // Arc+Repulsor Leds
 
 // Declare variables for setup special effects (applies to LED eyes only for now)
 // Declare variables for LED eyes special effects (applies to LED eyes only for now)
-#define EYES_NONE 0 // No special effects, just turn on the LED eyes
+#define EYES_NONE 0        // No special effects, just turn on the LED eyes
 #define EYES_MOVIE_BLINK 1 // Blink LED eyes on setup, sequence based on Avengers Movie
-#define EYES_FADE_ON 2 // Slowly brighten LED eyes until fully lit
+#define EYES_FADE_ON 2     // Slowly brighten LED eyes until fully lit
 
 // To use the specific feature below
 // use double slashes "//" to comment, or uncomment (remove double slashes) in the code below
 
 // Uncomment this line if you don't want any special effect during startup, comment this line to disable this effect
-///#define SETUP_FX EYES_NONE
+/// #define SETUP_FX EYES_NONE
 
 // Uncomment this line if you want the movie blink special effect during startup, comment this line to disable this effect
 #define SETUP_FX EYES_MOVIE_BLINK
@@ -123,7 +123,7 @@ static const int SERVO2_PIN = 19; // set the pin for servo 2
 // use double slashes "//" to comment, or uncomment (remove double slashes) in the code below
 
 // Uncomment this line if you don't want any special effect during operation, comment this line to disable this effect
-//#define EYES_FX EYES_NONE
+// #define EYES_FX EYES_NONE
 
 // Uncomment this line if you want the movie blink special effect during operation, comment this line to disable this effect
 // #define EYES_FX EYES_MOVIE_BLINK
