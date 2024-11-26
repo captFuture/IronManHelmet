@@ -32,8 +32,6 @@ DEVELOPED BY
 
  */
 #include <Arduino.h>
-#include <SD.h>
-
 #include <M5Unified.h>
 #include "config.h"
 #include "ESP32_New_ISR_Servo.h"
@@ -83,6 +81,12 @@ int ledEyesCurMode = LED_EYES_DIM_MODE; // Keep track if we're dimming or bright
 int ledEyesMinPwm = 0;
 int ledEyesCurPwm = 0;           // Tracking the level of the LED eyes for dim/brighten feature
 int ledEyesMaxPwm = 128;         // limiting max brightness of leds
+
+int ledEyesStdColor =  160;
+int ledEyesAltColor =  0;
+int ledEyesStartColor =  128;
+int ledFlashColor = 100;
+
 const int ledEyesIncrement = 20; // Define the increments to brighten or dim the LED eyes
 
 /**
@@ -108,16 +112,14 @@ void simDelay(long period)
 void movieblink()
 {
   Serial.println(F("Start Movie Blink.."));
-
-  // pause for effect...
   simDelay(300);
   if (battlemode)
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesAltColor, 255, ledEyesMaxPwm));
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
   }
   FastLED.show();
 
@@ -159,11 +161,8 @@ void movieblink()
 
   // All on
   setLedEyes(ledEyesMaxPwm);
-
-  playSoundEffect(SND_JARVIS);
-  simDelay(1000);
-
-  mp3Obj.sleep();
+  simDelay(2000);
+  Serial.println(F("End Movie Blink.."));
 }
 
 /*
@@ -176,11 +175,11 @@ void fadeEyesOn()
 
   if (battlemode)
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesAltColor, 255, ledEyesMinPwm));
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMinPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMinPwm));
   }
   // FastLED.show();
   ledEyesCurPwm = 0;
@@ -200,38 +199,31 @@ void fadeEyesOn()
 void init_player()
 {
   Serial2.begin(9600);
-
   if (!Serial2.available())
   {
     Serial.println(F("Serial object not available."));
   }
-
   Serial.println(F("Initializing DFPlayer ... (May take 3~5 seconds)"));
-
   bool dfInit = mp3Obj.begin(Serial2, false, true);
-
   simDelay(1000);
-
   if (!dfInit)
   {
     Serial.println(F("Unable to begin:"));
     Serial.println(F("1.Please recheck the connection!"));
     Serial.println(F("2.Please insert the SD card!"));
-
     dfInit = mp3Obj.begin(Serial2, false, true);
-    simDelay(400); // originally 1000ms
+    simDelay(400);
   }
 
   Serial.println(F("DFPlayer Mini online."));
-
-  mp3Obj.setTimeOut(500); // Set serial communictaion time out 500ms
-
+  mp3Obj.setTimeOut(500);
   Serial.println(F("Setting volume"));
   mp3Obj.volume(VOLUME);
-  simDelay(100); // DFRobot Timing 9-9-2022
+  simDelay(100); 
   mp3Obj.EQ(DFPLAYER_EQ_NORMAL);
+  mp3Obj.disableLoop();
   mp3Obj.outputDevice(DFPLAYER_DEVICE_SD);
-  simDelay(100); // DFRobot Timing 9-9-2022
+  simDelay(100);
 }
 
 /**
@@ -239,6 +231,7 @@ void init_player()
  */
 void playSoundEffect(int soundEffect)
 {
+
   mp3Obj.volume(VOLUME);
   simDelay(100); // DFRobot Timing 9-9-2022
   Serial.print(F("Playing sound effect: "));
@@ -247,7 +240,8 @@ void playSoundEffect(int soundEffect)
   Serial.println(mp3Obj.readVolume());
   simDelay(100); // DFRobot Timing 9-9-2022
   mp3Obj.play(soundEffect);
-  printDetail(mp3Obj.readType(), mp3Obj.read()); // Print the detail message from DFPlayer to handle different errors and states.
+  printDetail(mp3Obj.readType(), mp3Obj.read());
+
 }
 
 /**
@@ -279,7 +273,7 @@ void facePlateClose()
   // Send data to the servos for movement
   ESP32_ISR_Servos.setPosition(0, SERVO1_CLOSE_POS);
   ESP32_ISR_Servos.setPosition(1, SERVO2_CLOSE_POS);
-  simDelay(1000); // wait doesn't wait long enough for servos to fully complete...
+  simDelay(1000);
 
   // Detach so motors don't "idle"
   ESP32_ISR_Servos.disableAll();
@@ -295,11 +289,11 @@ void setLedEyes(int pwmValue)
 {
   if (battlemode)
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, pwmValue));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesAltColor, 255, pwmValue));
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, pwmValue));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, pwmValue));
   }
   FastLED.show();
   ledEyesCurPwm = pwmValue;
@@ -313,11 +307,11 @@ void ledEyesOn()
   Serial.println(F("Turning LED eyes on..."));
   if (battlemode)
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesAltColor, 255, ledEyesMaxPwm));
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
   }
   // FastLED.show();
   ledEyesCurMode = LED_EYES_DIM_MODE;
@@ -331,11 +325,11 @@ void ledEyesOff()
   Serial.println(F("Turning LED eyes off..."));
   if (battlemode)
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesAltColor, 255, ledEyesMinPwm));
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMinPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMinPwm));
   }
   // FastLED.show();
   ledEyesCurMode = LED_EYES_BRIGHTEN_MODE;
@@ -364,7 +358,6 @@ void ledEyesDim()
 {
   Serial.print(F("."));
   ledEyesCurPwm = ledEyesCurPwm - ledEyesIncrement; // Decrease the brightness
-  // Make sure we don't go over the limit
   Serial.print(F("."));
   if (ledEyesCurPwm <= 0)
   {
@@ -377,7 +370,6 @@ void ledEyesBrighten()
 
   Serial.print(F("."));
   ledEyesCurPwm = ledEyesCurPwm + ledEyesIncrement; // Increase the brightness
-  // Make sure we don't go over the limit
   if (ledEyesCurPwm >= ledEyesMaxPwm)
   {
     ledEyesCurPwm = ledEyesMaxPwm;
@@ -391,11 +383,11 @@ void ledEyesFade()
 {
   if (battlemode)
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesAltColor, 255, ledEyesMaxPwm));
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
   }
 
   if (ledEyesCurPwm == ledEyesMaxPwm)
@@ -419,20 +411,18 @@ void ledEyesFade()
   setLedEyes(ledEyesCurPwm);
   arcMode(1);
   simDelay(200);
-  // FastLED.show();
 }
 
 void arcMode(uint8_t mode)
 {
   if (battlemode)
   {
-    fill_solid(leds1, NUM_LEDS_1, CHSV(0, 255, ledEyesMaxPwm));
+    fill_solid(leds1, NUM_LEDS_1, CHSV(ledEyesAltColor, 255, ledEyesMaxPwm));
   }
   else
   {
-    fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, ledEyesMaxPwm));
+    fill_solid(leds1, NUM_LEDS_1, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
   }
-  // FastLED.show();
 }
 
 /**
@@ -539,11 +529,11 @@ void handlePrimaryButtonLongPress()
 
     if (battlemode)
     {
-      fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
+      fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesAltColor, 255, ledEyesMaxPwm));
     }
     else
     {
-      fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
+      fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
     }
     break;
 
@@ -580,14 +570,14 @@ void repulsorFx(int sound)
   Serial.println("Repulsorflash");
   for (int i = 0; i < ledEyesMaxPwm; i = i + 20)
   {
-    fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, i));
+    fill_solid(leds1, NUM_LEDS_1, CHSV(ledEyesStdColor, 255, i));
     FastLED.show();
     simDelay(50);
   }
-  fill_solid(leds1, NUM_LEDS_1, CHSV(100, 0, 255));
+  fill_solid(leds1, NUM_LEDS_1, CHSV(ledFlashColor, 0, 255));
   FastLED.show();
   simDelay(200);
-  fill_solid(leds1, NUM_LEDS_1, CHSV(160, 255, ledEyesMaxPwm));
+  fill_solid(leds1, NUM_LEDS_1, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
   FastLED.show();
 }
 
@@ -595,11 +585,6 @@ void setup()
 {
   auto cfg = M5.config();
   M5.begin(cfg);
-  while (false == SD.begin(GPIO_NUM_4, SPI, 25000000))
-  {
-    M5.delay(500);
-  }
-
   { /// custom setting
     auto spk_cfg = M5.Speaker.config();
     spk_cfg.sample_rate = 96000;
@@ -616,14 +601,14 @@ void setup()
   M5.Display.print("J.A.R.V.I.S.");
 
   Serial.begin(115200);
-  simDelay(2000); // Give the serial service time to initialize
+  simDelay(2000);
   Serial.print(F("Initializing Iron Man Servo version: "));
   Serial.println(VERSION);
 
   FastLED.addLeds<WS2812B, DATA_PIN_1, GRB>(leds1, NUM_LEDS_1);
-  FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(leds2, NUM_LEDS_2);
-  fill_solid(leds1, NUM_LEDS_1, CHSV(96, 255, ledEyesMaxPwm)); // Arcstart
-  fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMinPwm));  // Eyestart
+  FastLED.addLeds<WS2812B, DATA_PIN_2, GRB>(leds2, NUM_LEDS_2); 
+  fill_solid(leds1, NUM_LEDS_1, CHSV(ledEyesStartColor, 255, ledEyesMaxPwm/2)); // Arcstart
+  fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStartColor, 255, ledEyesMaxPwm/2));  // Eyestart
   FastLED.show();
 
   ESP32_ISR_Servos.useTimer(USE_ESP32_TIMER_NO);
@@ -649,7 +634,7 @@ void setup()
 
   ESP32_ISR_Servos.setPosition(0, SERVO1_OPEN_POS);
   ESP32_ISR_Servos.setPosition(1, SERVO2_OPEN_POS);
-
+  simDelay(2000);
   startupFx(); // Run the initial features
 }
 
@@ -659,6 +644,7 @@ void setup()
  */
 void loop()
 {
+
   if (M5.BtnA.wasClicked())
   {
     Serial.println(F("Click A"));
@@ -666,49 +652,57 @@ void loop()
   }
   if (M5.BtnA.wasDoubleClicked())
   {
-    Serial.println(F("DblClick A - free"));
+    Serial.println(F("DblClick A"));
+    playSoundEffect(SND_JARVIS);
+    movieblink();
+    arcMode(1);
   }
   if (M5.BtnA.pressedFor(1000))
   {
-    Serial.println(F("Longpress A - free"));
+    Serial.println(F("Longpress A"));
+    ledEyesOnOff();
   }
+
 
   if (M5.BtnB.wasClicked())
   {
     Serial.println("Click B - free");
+
   }
   if (M5.BtnB.wasDoubleClicked())
   {
     Serial.println(F("DblClick B - free"));
+
   }
   if (M5.BtnB.pressedFor(1000))
   {
-    Serial.println("Longpress B");
-    ledEyesOnOff();
+    Serial.println("Longpress B - free");
+    
   }
 
   if (M5.BtnC.wasClicked())
   {
     Serial.println("Click C");
-    repulsorFx(4);
+    repulsorFx(SND_REPULSOR);
   }
   if (M5.BtnC.wasDoubleClicked())
   {
-    Serial.println(F("DblClick C - free"));
+    Serial.println(F("DblClick C"));
+    repulsorFx(SND_REPULSOR2);
   }
   if (M5.BtnC.pressedFor(1000))
   {
     Serial.println("LongPress C");
-    playSoundEffect(SND_JARVIS2);
+    playSoundEffect(SND_IAMIRONMAN);
     battlemode = !battlemode;
 
     if (battlemode)
     {
-      fill_solid(leds2, NUM_LEDS_2, CHSV(0, 255, ledEyesMaxPwm));
+      fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesAltColor, 255, ledEyesMaxPwm));
     }
     else
     {
-      fill_solid(leds2, NUM_LEDS_2, CHSV(160, 255, ledEyesMaxPwm));
+      fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
     }
   }
 

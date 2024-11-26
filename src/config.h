@@ -79,6 +79,9 @@ static const int PWM_HIGH = 2400;
 static const int PWM_LOW = 400;
 #endif
 
+//FREE PINS
+//13, 15
+
 // Declare pin settings
 static const int SERVO1_PIN = 2; // set the pin for servo 1
 static const int SERVO2_PIN = 5; // set the pin for servo 2
@@ -98,8 +101,8 @@ static const int SERVO2_PIN = 5; // set the pin for servo 2
 #define BUTTON_PIN 39  // the pin that the pushbutton is attached to
 #define BUTTON2_PIN 38 // the pin that the repulsor pushbutton is attached to
 
-#define DATA_PIN_1 25 // Eye Leds
-#define DATA_PIN_2 26 // Arc+Repulsor Leds
+#define DATA_PIN_1 12 // Arc+Repulsor Ledsa
+#define DATA_PIN_2 26 // Eye Leds
 
 // Declare variables for setup special effects (applies to LED eyes only for now)
 // Declare variables for LED eyes special effects (applies to LED eyes only for now)
