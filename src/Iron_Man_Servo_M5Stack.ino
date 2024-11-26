@@ -510,59 +510,6 @@ void handlePrimaryButtonLongPress()
   ledEyesFade(); // Dim or brighten the LED eyes
 }
 
-/**
- * Event handler for when the primary button is pressed multiple times
- */
-/*void handlePrimaryButtonMultiPress()
-{
-  switch (primaryButton.getNumberClicks())
-  {
-  case 3:
-    Serial.println("SND_IAMIRONMAN");
-    playSoundEffect(SND_IAMIRONMAN);
-    break;
-
-  case 4:
-    Serial.println("SND_JARVIS2");
-    playSoundEffect(SND_JARVIS2);
-    battlemode = !battlemode;
-
-    if (battlemode)
-    {
-      fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesAltColor, 255, ledEyesMaxPwm));
-    }
-    else
-    {
-      fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
-    }
-    break;
-
-  default:
-    break;
-  }
-}*/
-
-/**
- * Initializes the primary button for multi-functions
- */
-/*void initPrimaryButton()
-{
-  primaryButton.attachClick(handlePrimaryButtonSingleTap);
-  primaryButton.attachDoubleClick(handlePrimaryButtonDoubleTap);
-  primaryButton.attachDuringLongPress(handlePrimaryButtonLongPress);
-  primaryButton.attachMultiClick(handlePrimaryButtonMultiPress);
-}
-
-void initRepulsorButton()
-{
-  repulsorButton.attachClick(handleRepulsorButtonSingleTap);
-  repulsorButton.attachDoubleClick(handleRepulsorButtonDoubleTap);
-  repulsorButton.attachMultiClick(handleRepulsorButtonMultiPress);
-}*/
-
-/**
- * Method to run special repulsor effects
- */
 void repulsorFx(int sound)
 {
   playSoundEffect(sound);
@@ -674,11 +621,13 @@ void loop()
     Serial.println(F("DblClick B - free"));
 
   }
-  if (M5.BtnB.pressedFor(1000))
+  if (M5.BtnB.isHolding())
   {
-    Serial.println("Longpress B - free");
-    
+    Serial.println("Holding B");
+    ledEyesFade();
   }
+
+
 
   if (M5.BtnC.wasClicked())
   {
