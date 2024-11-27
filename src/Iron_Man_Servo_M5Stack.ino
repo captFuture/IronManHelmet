@@ -80,12 +80,13 @@ int facePlateIsrMode = ISRSERVO_OPEN;
 int ledEyesCurMode = LED_EYES_DIM_MODE; // Keep track if we're dimming or brightening
 int ledEyesMinPwm = 0;
 int ledEyesCurPwm = 0;           // Tracking the level of the LED eyes for dim/brighten feature
-int ledEyesMaxPwm = 128;         // limiting max brightness of leds
+int ledEyesMaxPwm = 100;         // limiting max brightness of leds
 
 int ledEyesStdColor =  160;
 int ledEyesAltColor =  0;
 int ledEyesStartColor =  128;
 int ledFlashColor = 100;
+int ledEyesSaturation = 128;
 
 const int ledEyesIncrement = 20; // Define the increments to brighten or dim the LED eyes
 
@@ -119,7 +120,7 @@ void movieblink()
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, ledEyesSaturation, ledEyesMaxPwm));
   }
   FastLED.show();
 
@@ -179,7 +180,7 @@ void fadeEyesOn()
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMinPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, ledEyesSaturation, ledEyesMinPwm));
   }
   // FastLED.show();
   ledEyesCurPwm = 0;
@@ -293,7 +294,7 @@ void setLedEyes(int pwmValue)
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, pwmValue));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, ledEyesSaturation, pwmValue));
   }
   FastLED.show();
   ledEyesCurPwm = pwmValue;
@@ -311,7 +312,7 @@ void ledEyesOn()
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, ledEyesSaturation, ledEyesMaxPwm));
   }
   // FastLED.show();
   ledEyesCurMode = LED_EYES_DIM_MODE;
@@ -329,7 +330,7 @@ void ledEyesOff()
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMinPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, ledEyesSaturation, ledEyesMinPwm));
   }
   // FastLED.show();
   ledEyesCurMode = LED_EYES_BRIGHTEN_MODE;
@@ -387,7 +388,7 @@ void ledEyesFade()
   }
   else
   {
-    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
+    fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, ledEyesSaturation, ledEyesMaxPwm));
   }
 
   if (ledEyesCurPwm == ledEyesMaxPwm)
@@ -421,7 +422,7 @@ void arcMode(uint8_t mode)
   }
   else
   {
-    fill_solid(leds1, NUM_LEDS_1, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
+    fill_solid(leds1, NUM_LEDS_1, CHSV(ledEyesStdColor, ledEyesSaturation, ledEyesMaxPwm));
   }
 }
 
@@ -431,10 +432,8 @@ void arcMode(uint8_t mode)
 void startupFx()
 {
   playSoundEffect(SND_CLOSE);
-  simDelay(500); // Timing for Helmet Close Sound and delay to servo closing
-
+  simDelay(1800); // Timing for Helmet Close Sound and delay to servo closing
   facePlateClose();
-
   switch (SETUP_FX)
   {
   case EYES_NONE:
@@ -451,7 +450,7 @@ void startupFx()
     break;
   }
 
-  simDelay(500);
+  //simDelay(500);
   playSoundEffect(SND_JARVIS);
 }
 
@@ -471,7 +470,7 @@ void facePlateOpenFx()
 void facePlateCloseFx()
 {
   playSoundEffect(SND_CLOSE);
-  simDelay(1200); // Timing for Helmet Close Sound and delay to servo closing
+  simDelay(1800); // Timing for Helmet Close Sound and delay to servo closing
   facePlateClose();
   switch (EYES_FX)
   {
@@ -524,7 +523,7 @@ void repulsorFx(int sound)
   fill_solid(leds1, NUM_LEDS_1, CHSV(ledFlashColor, 0, 255));
   FastLED.show();
   simDelay(200);
-  fill_solid(leds1, NUM_LEDS_1, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
+  fill_solid(leds1, NUM_LEDS_1, CHSV(ledEyesStdColor, ledEyesSaturation, ledEyesMaxPwm));
   FastLED.show();
 }
 
@@ -542,10 +541,14 @@ void setup()
   M5.Speaker.setVolume(0);
   init_player(); // initializes the sound player
 
-  M5.Display.setEpdMode(epd_mode_t::epd_fastest);
+  //M5.Display.setEpdMode(epd_mode_t::epd_fastest);
+
+  M5.Display.setRotation(3);
   M5.Display.fillScreen(TFT_BLACK);
   M5.Display.setCursor(30, 10);
-  M5.Display.print("J.A.R.V.I.S.");
+  M5.Display.print(" --- J.A.R.V.I.S. --- ");
+  M5.Display.sleep();
+  M5.Display.setBrightness(0);
 
   Serial.begin(115200);
   simDelay(2000);
@@ -597,13 +600,6 @@ void loop()
     Serial.println(F("Click A"));
     facePlateFx();
   }
-  if (M5.BtnA.wasDoubleClicked())
-  {
-    Serial.println(F("DblClick A"));
-    playSoundEffect(SND_JARVIS);
-    movieblink();
-    arcMode(1);
-  }
   if (M5.BtnA.pressedFor(1000))
   {
     Serial.println(F("Longpress A"));
@@ -614,12 +610,8 @@ void loop()
   if (M5.BtnB.wasClicked())
   {
     Serial.println("Click B - free");
-
-  }
-  if (M5.BtnB.wasDoubleClicked())
-  {
-    Serial.println(F("DblClick B - free"));
-
+    playSoundEffect(SND_JARVIS2);
+    movieblink();
   }
   if (M5.BtnB.isHolding())
   {
@@ -634,11 +626,6 @@ void loop()
     Serial.println("Click C");
     repulsorFx(SND_REPULSOR);
   }
-  if (M5.BtnC.wasDoubleClicked())
-  {
-    Serial.println(F("DblClick C"));
-    repulsorFx(SND_REPULSOR2);
-  }
   if (M5.BtnC.pressedFor(1000))
   {
     Serial.println("LongPress C");
@@ -651,7 +638,7 @@ void loop()
     }
     else
     {
-      fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, 255, ledEyesMaxPwm));
+      fill_solid(leds2, NUM_LEDS_2, CHSV(ledEyesStdColor, ledEyesSaturation, ledEyesMaxPwm));
     }
   }
 

@@ -53,7 +53,7 @@ bool battlemode = false;
 #define RX_PIN 16 // set pin for receive (RX) communications
 #define TX_PIN 17 // set pin for transmit (TX) communications
 
-#define VOLUME 25 // sound board volume level (30 is max)
+#define VOLUME 30 // sound board volume level (30 is max)
 
 // Servo configuration types.  Use one of these values to set the SERVO_TYPE definition below
 #define TPMG90S 0
