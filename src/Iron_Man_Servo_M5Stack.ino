@@ -36,6 +36,8 @@ DEVELOPED BY
 #include "config.h"
 #include "ESP32_New_ISR_Servo.h"
 #include <FastLED.h>
+#include "DFRobotDFPlayerMini.cpp"
+#include "SPIFFS.h"
 
 // Declare variables for sound control
 #define SND_CLOSE 1    // sound track for helmet closing sound
@@ -51,11 +53,10 @@ DEVELOPED BY
 #define SND_REPULSOR4 10 // sound track for repulsor sound effect
 
 #define VERSION "0.2"
-#include "DFRobotDFPlayerMini.cpp"
 void printDetail(uint8_t type, int value); // header method for implementation below; affects C++ compilers
+
 DFRobotDFPlayerMini mp3Obj;                // Create object for DFPlayer Mini
 
-// Array für die LED-Daten
 CRGB leds1[NUM_LEDS_1];
 CRGB leds2[NUM_LEDS_2];
 
@@ -536,20 +537,23 @@ void setup()
     spk_cfg.sample_rate = 96000;
     M5.Speaker.config(spk_cfg);
   }
+  if (!SPIFFS.begin(true)) {
+    Serial.println("SPIFFS Mount Failed");
+    return;
+  }
 
   M5.Speaker.begin();
   M5.Speaker.setVolume(0);
   init_player(); // initializes the sound player
-
   //M5.Display.setEpdMode(epd_mode_t::epd_fastest);
-
   M5.Display.setRotation(3);
   M5.Display.fillScreen(TFT_BLACK);
-  M5.Display.setCursor(30, 10);
+  M5.Display.setCursor(100, 10);
   M5.Display.print(" --- J.A.R.V.I.S. --- ");
-  M5.Display.sleep();
+  //M5.Display.sleep();
   M5.Display.setBrightness(0);
-
+  //M5.Lcd.drawJpgFile(SPIFFS, "jarvis.jpg", 0, 0);
+  
   Serial.begin(115200);
   simDelay(2000);
   Serial.print(F("Initializing Iron Man Servo version: "));
